@@ -39,6 +39,13 @@ class Chapter(object):
         except ValueError:
             raise UnknownChapterFormat(f'Unsupported chapter type for comparison {self.chapter}')
 
+    def is_valid(self):
+        try:
+            self._get_val()
+        except UnknownChapterFormat:
+            return False
+        return True
+
     @property
     def chapter(self):
         return self._chapter
