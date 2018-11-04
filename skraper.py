@@ -1,26 +1,36 @@
-from collections import namedtuple
 from typing import Iterable, List, Union
 from queue import Queue
+import warnings
 
 from bs4 import BeautifulSoup
 import requests
 
-ChapterRelease = namedtuple('ChapterData', ['chapter', 'group'])
+from type import Chapter
+
+
+class ScrappingWarning(UserWarning):
+    pass
 
 
 class ScrappedReleases(object):
     """ represents data returned from scrapping """
-    def __init__(self, serie_id: str, chapters_releases: Iterable[ChapterRelease], warning_message=None):
+
+    class ScrappedChapterRelease(object):
+        def __init__(self, chapter: Chapter, group: str):
+            self.chapter = chapter
+            self.group = group
+
+    def __init__(self, serie_id: str, chapters_releases: Iterable[ScrappedChapterRelease], warning_message=None):
         self.serie_id = serie_id
+        self.releases = list(chapters_releases)  # todo sort them by decreasing order
         self.warning_message = warning_message
-        self.releases = list(chapters_releases) # todo sort them by decreasing order
 
     @property
-    def warning(self) -> bool:
-        return bool(self.warning_message)
+    def warning(self):
+        return self.warning_message is not None
 
     @property
-    def latest_chapter_release(self) -> Union[None, ChapterRelease]:
+    def latest_chapter_release(self) -> Union[None, ScrappedChapterRelease]:
         if not self.releases:
             return None
         return self.releases[-1]
@@ -62,7 +72,7 @@ def scrap_bakaupdate(result_queue: Queue, serie_id: str) -> None:
     scanlation_groups = _extract_soup_data(latest_release_div_soup, 'a')
     warning_message = None
     if len(chapters) > len(scanlation_groups):
-        warning_message = f'For some strange reason, {len(chapters) - len(scanlation_groups)} more chapters have been ' \
+        warning_message = f'For some strange reason, {len(chapters) - len(scanlation_groups)} more chapters have been '\
                           f'scraped than for groups'
     elif len(chapters) < len(scanlation_groups):
         warning_message = f'For some strange reason, {len(chapters) - len(scanlation_groups)} more groups have been ' \
@@ -70,11 +80,12 @@ def scrap_bakaupdate(result_queue: Queue, serie_id: str) -> None:
     if warning_message:
         warning_message += f'</br>For serie : {serie_id}: display might be wrong. original display was : </br>' \
                            f'<div>{latest_release_div_soup.prettify()}</div></br>'
+        warnings.warn(warning_message,ScrappingWarning)
 
     max_index = max(len(chapters), len(scanlation_groups))
     result_queue.put(
         ScrappedReleases(
-            serie_id,
-            chapters_releases=[ChapterRelease(chapter, group)
+            serie_id=serie_id,
+            chapters_releases=[ScrappedReleases.ScrappedChapterRelease(Chapter(chapter), group)
                                for chapter, group in zip(chapters[:max_index], scanlation_groups[:max_index])],
             warning_message=warning_message))
