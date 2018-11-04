@@ -2,7 +2,7 @@ import re
 from typing import Union
 
 
-class UnknownChapterFormat(Warning):
+class UnknownChapterFormat(ValueError):
     pass
 
 
@@ -37,8 +37,7 @@ class Chapter(object):
         try:
             return float(self.chapter)
         except ValueError:
-            raise
-        ...  # todo
+            raise UnknownChapterFormat(f'Unsupported chapter type for comparison {self.chapter}')
 
     @property
     def chapter(self):
