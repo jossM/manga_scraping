@@ -25,6 +25,15 @@ class ScrappedReleases(object):
             return None
         return self.releases[-1]
 
+    def __repr__(self):
+        rep = f"Available releases for serie {self.serie_id}:"
+        releases = '\n'.join(f"chapter {release.chapter} by group {release.group}" for release in self.releases)
+        if releases:
+            rep += '\n' + releases
+        if self.warning_message:
+            rep += "\nWARNING : " + self.warning_message
+        return rep
+
 
 def _extract_soup_data(soup: BeautifulSoup, tag: str) -> List[str]:
     """ extract all the data once on the correct div """
@@ -46,18 +55,22 @@ def scrap_bakaupdate(result_queue: Queue, serie_id: str) -> None:
     Function to be executed in a thread to avoid waiting.
     """
     bakaupdate_page = requests.get(f'https://www.mangaupdates.com/series.html?id={serie_id}')
-    bakaupdate_soup = BeautifulSoup(bakaupdate_page.content)
+    bakaupdate_soup = BeautifulSoup(bakaupdate_page.content, features="lxml")
     latest_release_title_soup = bakaupdate_soup.find(string='Latest Release(s)').parent.parent
     latest_release_div_soup = latest_release_title_soup.find_next_sibling()
     chapters = _extract_soup_data(latest_release_div_soup, 'i')
     scanlation_groups = _extract_soup_data(latest_release_div_soup, 'a')
     warning_message = None
     if len(chapters) > len(scanlation_groups):
-        warning_message = f'For some strange reason, {len(chapters) - len(scanlation_group)} more chapters have been ' \
-                          f'scraped for groups for serie {serie_id}. Display might be wrong.'
+        warning_message = f'For some strange reason, {len(chapters) - len(scanlation_groups)} more chapters have been ' \
+                          f'scraped than for groups'
     elif len(chapters) < len(scanlation_groups):
-        warning_message = f'For some strange reason, {len(chapters) - len(scanlation_group)} more groups have been ' \
-                          f'scraped for chapters for serie {serie_id}. Display might be wrong.'
+        warning_message = f'For some strange reason, {len(chapters) - len(scanlation_groups)} more groups have been ' \
+                          f'scraped than for chapters'
+    if warning_message:
+        warning_message += f'</br>For serie : {serie_id}: display might be wrong. original display was : </br>' \
+                           f'<div>{latest_release_div_soup.prettify()}</div></br>'
+
     max_index = max(len(chapters), len(scanlation_groups))
     result_queue.put(
         ScrappedReleases(
