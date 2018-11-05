@@ -30,13 +30,13 @@ def handler_scheduled_scraping(event, context):
         latest_chapter_release = scrapped_releases.latest_chapter_release
         if latest_chapter_release is None:
             continue
-        page_mark = page_marks_map[scrapped_releases.serie_id]
-        if latest_chapter_release.chapter > page_mark.latest_read_chapter:
-            expected_chapter_link = get_lucky_google_link(page_mark.serie_name,
+        serie_page_mark = page_marks_map[scrapped_releases.serie_id]
+        if latest_chapter_release.chapter > serie_page_mark.latest_read_chapter:
+            expected_chapter_link = get_lucky_google_link(serie_page_mark.serie_name,
                                                           latest_chapter_release.group,
                                                           latest_chapter_release.chapter)
             mail_message.add_release(
-                serie_name=page_mark.serie_name,
+                serie_name=serie_page_mark.serie_name,
                 group=latest_chapter_release.group,
                 chapter_link=expected_chapter_link)
     send_to_sns(mail_message)
