@@ -38,8 +38,7 @@ class BaseDynamoORM(Generic[_DynamoType]):
         return [cls(**page_mark_elem) for page_mark_elem in response['Items']]
 
     def put(self) -> None:
-        dynamo_table = dynamodb.Table(super(self).dynamo_db_attributes())
-        dynamo_table.put_item(
+        type(self).dynamo_table().put_item(
             Item={attribute: getattr(self, attribute) for attribute in type(self).dynamo_db_attributes()})
 
     def __repr__(self) -> str:
