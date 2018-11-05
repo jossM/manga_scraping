@@ -22,22 +22,22 @@ class Chapter(object):
     def __ne__(self, other: 'Chapter'):
         return self._get_val() != other._get_val()
 
-    def __str__(self):  # used to serialize
-        return self.chapter
+    def __str__(self) -> str:  # used to serialize
+        return str(self._chapter)
 
     def _get_val(self) -> float:
         """ implements parsing logic for manga chapters (prologue, oneshot, 24.1, 24 etc... """
-        if self.chapter is None:
+        if self._chapter is None:
             return -1000
-        attached_string_chapter = re.sub(r'[\W]--[ ]]+', '', self.chapter).lower()
+        attached_string_chapter = re.sub(r'[\W]--[ ]]+', '', self._chapter).lower()
         if attached_string_chapter == 'oneshot':
             return -2
         if attached_string_chapter == 'prologue':
             return -1
         try:
-            return float(self.chapter)
+            return float(self._chapter)
         except ValueError:
-            raise UnknownChapterFormat(f'Unsupported chapter type for comparison {self.chapter}')
+            raise UnknownChapterFormat(f'Unsupported chapter type for comparison {self._chapter}')
 
     def is_valid(self):
         try:
@@ -45,7 +45,3 @@ class Chapter(object):
         except UnknownChapterFormat:
             return False
         return True
-
-    @property
-    def chapter(self):
-        return self._chapter

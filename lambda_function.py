@@ -4,7 +4,7 @@ from typing import Iterator
 import warnings
 import queue
 
-from page_marks_db import PageMark
+from dynamo.page_marks_db import PageMark
 from skraper import scrap_bakaupdate, ScrappedReleases
 
 
@@ -19,14 +19,12 @@ def to_yielder(q: queue.Queue, max_number_result: int, timeout: int) -> Iterator
 def handler_scheduled_scraping(event, context):
     mail_message = MailMessage()
     with warnings.catch_warnings(record=True) as triggered_warning:
-        page_marks = PageMark.get_all()  # todo
+        page_marks = PageMark.get_all()
         result_queue = queue.Queue()
         with closing(pool.Pool(cpu_count()-1)) as request_pool:
             request_pool.map(scrap_bakaupdate, [(result_queue, page_mark.serie_id) for page_mark in page_marks])
         page_marks_map = {page_mark.serie_id: page_mark for page_mark in page_marks}
-        scrap_stream = to_yielder(result_queue,
-                                  max_number_result=len(page_marks),
-                                  timeout=10)
+        scrap_stream = to_yielder(result_queue, max_number_result=len(page_marks), timeout=10)
         mail_message.add_warnings(triggered_warning)
     for scrapped_releases in scrap_stream:
         latest_chapter_release = scrapped_releases.latest_chapter_release

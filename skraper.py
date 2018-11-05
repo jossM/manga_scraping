@@ -5,7 +5,7 @@ import warnings
 from bs4 import BeautifulSoup
 import requests
 
-from type import Chapter
+from type.chapter import Chapter
 
 
 class ScrappingWarning(UserWarning):
