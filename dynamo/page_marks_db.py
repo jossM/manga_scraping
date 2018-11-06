@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import List
 import warnings
 
 from type.chapter import Chapter
@@ -12,14 +13,13 @@ class PageMark(base_type.BaseDynamoORM):
 
     _DATE_FORMAT = '%Y-%m-%d %H:%M:%s'
 
-    def __init__(self, serie_id: str, serie_name: str=None, latest_update: str=None, chapter_mark: str= None):
+    def __init__(self, serie_id: str, serie_name: str=None, latest_update: str=None, chapter_marks: List[str]= None):
         self.serie_id = serie_id
         warning_message = f'Corrupted PageMark document for serie {self.serie_id}.'
-        will_raise_warning = False
+        initial_warning_message_len = len(warning_message)
 
         self.serie_name = serie_name
         if self.serie_name is None:
-            will_raise_warning = True
             warning_message += ' "serie_name" attribute is missing.'
         try:
             self.latest_update = datetime.strptime(latest_update, self._DATE_FORMAT)
@@ -27,12 +27,22 @@ class PageMark(base_type.BaseDynamoORM):
             self.latest_update = None
         except ValueError:  # handles badly formatted dates
             self.latest_update = None
-            will_raise_warning = True
             warning_message += f' "latest_date" attribute has a date {latest_update}' \
                                f' that does not correspond to schema {self._DATE_FORMAT}.'
-        self.chapter_mark = Chapter(chapter_mark)
+        self.chapter_marks = []
+        if chapter_marks is None:
+            warning_message += f' "chapter_marks" attribute is missing.'
+        else:
+            for index_position, mark in enumerate(chapter_marks):
+                chapter = Chapter(mark)
+                if chapter.is_valid():
+                    self.chapter_marks.append(chapter)
+                else:
+                    warning_message += f'\n"chapter_mark" attribute is invalid at position. {index_position},' \
+                                       f' with value "{str(chapter)}"'
+            self.chapter_marks = sorted(self.chapter_marks, reverse=True)
+        self.chapter_mark = Chapter(chapter_marks)
         if not self.chapter_mark.is_valid():
-            will_raise_warning = True
             warning_message += f'  "latest_date" attribute has an unhandled format.'
-        if will_raise_warning:
+        if len(warning_message) > initial_warning_message_len:
             warnings.warn(warning_message, base_type.CorruptedDynamoDbBase)
