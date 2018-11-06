@@ -17,6 +17,8 @@ _DynamoType = TypeVar('_DynamoType')
 
 
 class BaseDynamoORM(Generic[_DynamoType]):
+    """ base class to operate all object serialization between dynamo and python """
+    # not really usefull with a single table but I used this project as a POC.
     @classmethod
     @abstractmethod
     def dynamo_table_name(cls) -> str:
