@@ -33,12 +33,6 @@ class ScrappedReleases(object):
     def warning(self):
         return self.warning_message is not None
 
-    @property
-    def latest_chapter_release(self) -> Union[None, ScrappedChapterRelease]:
-        if not self.releases:
-            return None
-        return self.releases[-1]
-
     def __repr__(self):
         rep = f"Available releases for serie {self.serie_id}:"
         releases = '\n'.join(f"chapter {release} by group {release.group}" for release in self.releases)
