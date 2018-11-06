@@ -25,15 +25,22 @@ class Chapter(object):
     def __str__(self) -> str:  # used to serialize
         return str(self._chapter)
 
+    def __cmp__(self, other):
+        if isinstance(other, Chapter):
+            return self._get_val().__cmp__(other._get_val())
+        return self._get_val().__cmp__(float(other))
+
     def _get_val(self) -> float:
         """ implements parsing logic for manga chapters (prologue, oneshot, 24.1, 24 etc... """
         if self._chapter is None:
-            return -1000
+            return -float('inf')
         attached_string_chapter = re.sub(r'[\W]--[ ]]+', '', self._chapter).lower()
         if attached_string_chapter == 'oneshot':
-            return -2
+            return float(-2)
         if attached_string_chapter == 'prologue':
-            return -1
+            return float(-1)
+        if attached_string_chapter == 'epilogue':
+            return float('inf')
         try:
             return float(self._chapter)
         except ValueError:
