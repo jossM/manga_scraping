@@ -15,10 +15,14 @@ class ScrappingWarning(UserWarning):
 class ScrappedReleases(object):
     """ represents data returned from scrapping """
 
-    class ScrappedChapterRelease(object):
-        def __init__(self, chapter: Chapter, group: str):
-            self.chapter = chapter
+    class ScrappedChapterRelease(Chapter):
+        def __init__(self, chapter: str, group: str):
+            super(ScrappedReleases.ScrappedChapterRelease, self).__init__(chapter)
             self.group = group
+
+        @property
+        def chapter(self):
+            return self._chapter
 
     def __init__(self, serie_id: str, chapters_releases: Iterable[ScrappedChapterRelease], warning_message=None):
         self.serie_id = serie_id
@@ -37,7 +41,7 @@ class ScrappedReleases(object):
 
     def __repr__(self):
         rep = f"Available releases for serie {self.serie_id}:"
-        releases = '\n'.join(f"chapter {release.chapter} by group {release.group}" for release in self.releases)
+        releases = '\n'.join(f"chapter {release} by group {release.group}" for release in self.releases)
         if releases:
             rep += '\n' + releases
         if self.warning_message:
@@ -86,6 +90,6 @@ def scrap_bakaupdate(result_queue: Queue, serie_id: str) -> None:
     result_queue.put(
         ScrappedReleases(
             serie_id=serie_id,
-            chapters_releases=[ScrappedReleases.ScrappedChapterRelease(Chapter(chapter), group)
+            chapters_releases=[ScrappedReleases.ScrappedChapterRelease(chapter, group)
                                for chapter, group in zip(chapters[:max_index], scanlation_groups[:max_index])],
             warning_message=warning_message))
