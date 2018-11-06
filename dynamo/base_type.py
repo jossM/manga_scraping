@@ -1,7 +1,7 @@
 from abc import abstractmethod
 import inspect
 import os
-from typing import List, Generic, TypeVar
+from typing import Dict, List, Generic, TypeVar, Any
 
 import boto3
 
@@ -39,9 +39,11 @@ class BaseDynamoORM(Generic[_DynamoType]):
         response = cls.dynamo_table().scan(ProjectionExpression=', '.join(cls.dynamo_db_attributes()))
         return [cls(**page_mark_elem) for page_mark_elem in response['Items']]
 
+    def serialize(self) -> Dict[str, Any]:
+        return {attribute: getattr(self, attribute) for attribute in type(self).dynamo_db_attributes()}
+
     def put(self) -> None:
-        type(self).dynamo_table().put_item(
-            Item={attribute: getattr(self, attribute) for attribute in type(self).dynamo_db_attributes()})
+        type(self).dynamo_table().put_item(Item=self.serialize())
 
     def __repr__(self) -> str:
         return '{' + ', '.join([f'{attribute}:{getattr(self, attribute)}'

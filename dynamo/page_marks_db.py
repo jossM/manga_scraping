@@ -1,8 +1,8 @@
 from datetime import datetime
-from typing import List
+from typing import List, Dict, Any
 import warnings
 
-from type.chapter import Chapter
+from chapter_type import Chapter
 from dynamo import base_type
 
 
@@ -41,8 +41,10 @@ class PageMark(base_type.BaseDynamoORM):
                     warning_message += f'\n"chapter_mark" attribute is invalid at position. {index_position},' \
                                        f' with value "{str(chapter)}"'
             self.chapter_marks = sorted(self.chapter_marks, reverse=True)
-        self.chapter_mark = Chapter(chapter_marks)
-        if not self.chapter_mark.is_valid():
-            warning_message += f'  "latest_date" attribute has an unhandled format.'
         if len(warning_message) > initial_warning_message_len:
             warnings.warn(warning_message, base_type.CorruptedDynamoDbBase)
+
+    def serialize(self) -> Dict[str, Any]:
+        serialized = super().serialize()
+        serialized['chapter_marks'] = [str(chapter) for chapter in self.chapter_marks]
+        return serialized
