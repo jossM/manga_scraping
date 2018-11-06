@@ -5,7 +5,7 @@ import warnings
 from bs4 import BeautifulSoup
 import requests
 
-from type.chapter import Chapter
+from chapter_type import Chapter
 
 
 class ScrappingWarning(UserWarning):
@@ -22,7 +22,7 @@ class ScrappedReleases(object):
 
     def __init__(self, serie_id: str, chapters_releases: Iterable[ScrappedChapterRelease], warning_message=None):
         self.serie_id = serie_id
-        self.releases = list(chapters_releases)  # todo sort them by decreasing order
+        self.releases = sorted(chapters_releases, reverse=True)
         self.warning_message = warning_message
 
     @property
