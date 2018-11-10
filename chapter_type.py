@@ -1,12 +1,11 @@
 import re
-from typing import Union, TypeVar
+from typing import Union, List
 import warnings
 
 
 class UnknownChapterFormat(UserWarning):
     pass
 
-ChapterType = TypeVar('ChapterType')
 
 class Chapter(object):
     def __init__(self, chapter: Union[str, None]):
@@ -26,11 +25,6 @@ class Chapter(object):
 
     def __str__(self) -> str:  # used to serialize
         return str(self._chapter)
-
-    def __cmp__(self, other: Union['Chapter', float, int]):
-        if isinstance(other, Chapter):
-            return self.get_val().__cmp__(other.get_val())
-        return self.get_val().__cmp__(float(other))
 
     def __hash__(self):
         return hash(self._chapter)
@@ -61,3 +55,15 @@ class Chapter(object):
         except UnknownChapterFormat:
             return False
         return True
+
+
+def get_min_diff_between_chapters(chapters: List[Chapter], already_sorted= False) -> float:
+    default_return = 1.
+    if not already_sorted:
+        chapters = sorted(chapters)
+    if not chapters:
+        return default_return
+    diffs = [abs(chapters[i] - chapters[i + 1]) for i in range(len(chapters)-1)]
+    if max(diffs) == 0:
+        return default_return
+    return next(dif for dif in diffs if dif)

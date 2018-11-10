@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any
 import warnings
 
 from chapter_type import Chapter
@@ -45,14 +45,6 @@ class PageMark(base_type.BaseDynamoORM):
                                        f' with value "{str(chapter)}"'
                 self.chapter_marks.append(chapter)
             self.chapter_marks = sorted(self.chapter_marks, reverse=True)
-        if not self.chapter_marks:
-            self.observed_diff_between_chapter = None
-        else:
-            diffs = [self.chapter_marks[i] - self.chapter_marks[i + 1] for i in range(len(self.chapter_marks)-1)]
-            if max(diffs) == 0:
-                self.observed_diff_between_chapter = None
-            else:
-                self.observed_diff_between_chapter = next(dif for dif in diffs if dif)
         if len(warning_message) > initial_warning_message_len:
             warnings.warn(warning_message, base_type.CorruptedDynamoDbBase)
 
