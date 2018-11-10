@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 import warnings
 
 from chapter_type import Chapter
@@ -13,7 +13,11 @@ class PageMark(base_type.BaseDynamoORM):
 
     _DATE_FORMAT = '%Y-%m-%d %H:%M:%s'
 
-    def __init__(self, serie_id: str, serie_name: str=None, latest_update: str=None, chapter_marks: List[str]= None):
+    def __init__(self,
+                 serie_id: str,
+                 serie_name: str=None,
+                 latest_update: str=None,
+                 chapter_marks: List[str]= None):
         self.serie_id = serie_id
         warning_message = f'Corrupted PageMark document for serie {self.serie_id}.'
         initial_warning_message_len = len(warning_message)
@@ -29,18 +33,26 @@ class PageMark(base_type.BaseDynamoORM):
             self.latest_update = None
             warning_message += f' "latest_date" attribute has a date {latest_update}' \
                                f' that does not correspond to schema {self._DATE_FORMAT}.'
-        self.chapter_marks = []
+
         if chapter_marks is None:
             warning_message += f' "chapter_marks" attribute is missing.'
+            self.chapter_marks = []
         else:
             for index_position, mark in enumerate(chapter_marks):
                 chapter = Chapter(mark)
-                if chapter.is_valid():
-                    self.chapter_marks.append(chapter)
-                else:
+                if not chapter.is_valid():
                     warning_message += f'\n"chapter_mark" attribute is invalid at position. {index_position},' \
                                        f' with value "{str(chapter)}"'
+                self.chapter_marks.append(chapter)
             self.chapter_marks = sorted(self.chapter_marks, reverse=True)
+        if not self.chapter_marks:
+            self.observed_diff_between_chapter = None
+        else:
+            diffs = [self.chapter_marks[i] - self.chapter_marks[i + 1] for i in range(len(self.chapter_marks)-1)]
+            if max(diffs) == 0:
+                self.observed_diff_between_chapter = None
+            else:
+                self.observed_diff_between_chapter = next(dif for dif in diffs if dif)
         if len(warning_message) > initial_warning_message_len:
             warnings.warn(warning_message, base_type.CorruptedDynamoDbBase)
 
