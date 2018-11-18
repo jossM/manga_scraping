@@ -1,108 +1,89 @@
-from typing import Iterable, List
-from queue import Queue
+from collections import Sequence
+from typing import Iterable, Union
 import warnings
 
 from bs4 import BeautifulSoup
 import requests
 
-import chapter_type
-from dynamo import page_marks_db
+import global_types
 
 
 class ScrappingWarning(UserWarning):
+    """ Any issue during scraping will have this type """
     pass
 
 
-class ScrappedReleases(object):
-    """ represents data returned from scrapping """
+class ScrappedChapterRelease(global_types.Chapter):
+    """ data on a given chapter """
+    def __init__(self, group: str, chapter: str, volume: Union[int, None]= None):
+        super(ScrappedChapterRelease, self).__init__(chapter, volume)
+        self.group = group
 
-    class ScrappedChapterRelease(chapter_type.Chapter):
-        def __init__(self, chapter: str, group: str):
-            super(ScrappedReleases.ScrappedChapterRelease, self).__init__(chapter)
-            self.group = group
 
-        @property
-        def chapter(self):
-            return self._chapter
-
+class ScrappedReleases(Sequence):
+    """ data returned from scrapping """
     def __init__(self,
                  serie_id: str,
-                 chapters_releases: Iterable[ScrappedChapterRelease],
-                 warning_message=None,
-                 observed_diff_between_chapter: float=None,
-                 deduced: bool=False):
+                 chapters_releases: Iterable[ScrappedChapterRelease]):
         self.serie_id = serie_id
-        self.releases = sorted(chapters_releases)
-        self.warning_message = warning_message
-        if not self.releases:
-            if not observed_diff_between_chapter:
-                self.min_dif_between_chapter = 1.
-            else:
-                self.min_dif_between_chapter = observed_diff_between_chapter
-        else:
-            releases_diff = [self.releases[i + 1] - self.releases[i] for i in range(len(self.releases)-1)]
-            self.min_dif_between_chapter = \
-                min([observed_diff_between_chapter] + [diff for diff in releases_diff if diff])
-        self.deduced = deduced
+        self.releases = sorted(chapters_releases, reverse=True)
 
-    def has_warning(self):
-        return self.warning_message is not None
+    def __getitem__(self, item: int) -> ScrappedChapterRelease:
+        try:
+            return self.releases[item]
+        except IndexError:
+            raise TypeError(f'trying to access element number {item} while there are only {len(self)} element(s)')
+        except TypeError as e:
+            raise TypeError(str(e).replace('list', 'ScrappedReleases', count=1))
 
-    def __repr__(self):
+    def __len__(self) -> int:
+        return len(self.releases)
+
+    def __repr__(self) -> str:
         rep = f"Available releases for serie {self.serie_id}:"
-        releases = '\n'.join(f"chapter {release} by group {release.group}" for release in self.releases)
+        releases = '\n'.join(f"{release} \tby group {release.group}" for release in self.releases)
         if releases:
             rep += '\n' + releases
-        if self.warning_message:
-            rep += "\nWARNING : " + self.warning_message
         return rep
 
 
-def _extract_soup_data(soup: BeautifulSoup, tag: str) -> List[str]:
-    """ extract all the data once on the correct div """
-    result = list()
-    for tag_soup in soup.find_all(tag):
-        try:
-            parsed_tag = next(tag_soup.children)
-        except StopIteration:
-            continue
-        if not isinstance(parsed_tag, str):
-            continue
-        result.append(parsed_tag)
-    return result
-
-
-def scrap_bakaupdate(result_queue: Queue, serie_page_mark: page_marks_db.PageMark) -> None:
+def scrap_bakaupdate(serie_id: str) -> ScrappedReleases:
     """
     Scraps data from bakaupdate for releases.
     Function to be executed in a thread to avoid waiting.
     """
-    bakaupdate_page = requests.get(f'https://www.mangaupdates.com/series.html?id={serie_page_mark.serie_id}')
+    context_message = f'serie id {serie_id}'
+    bakaupdate_page = requests.get(
+        f'https://www.mangaupdates.com/releases.html?search={serie_id}&stype=series')
     bakaupdate_soup = BeautifulSoup(bakaupdate_page.content, features="lxml")
-    latest_release_title_soup = bakaupdate_soup.find(string='Latest Release(s)').parent.parent
-    latest_release_div_soup = latest_release_title_soup.find_next_sibling()
-    chapters = _extract_soup_data(latest_release_div_soup, 'i')
-    scanlation_groups = _extract_soup_data(latest_release_div_soup, 'a')
-    warning_message = ''
-    if len(chapters) > len(scanlation_groups):
-        warning_message = f'For some strange reason, {len(chapters) - len(scanlation_groups)} more chapters have been '\
-                          f'scraped than for groups'
-    elif len(chapters) < len(scanlation_groups):
-        warning_message = f'For some strange reason, {len(chapters) - len(scanlation_groups)} more groups have been ' \
-                          f'scraped than for chapters'
+    content_table_container = bakaupdate_soup.find('td', id=lambda x: x == 'main_content')
+    inner_tables = content_table_container.find_all('table')
+    inner_tables.sort(key=lambda table_soup: len(table_soup))
+    content_table = inner_tables[-1]
+    scrapped_chapters = []
+    for row_number, row in enumerate(content_table.find_all('tr')):
+        row_cells = tuple(row.find_all('td', **{'class': lambda class_value: class_value == 'text pad'}))
+        if not row_cells:
+            continue
+        if len(row_cells) != 5:
+            warnings.warn(f"row {row_number} for {context_message} does not have 5 cells\n "
+                          f"Row was:\n {repr(row)}",
+                          ScrappingWarning)
+            continue
+        try:
+            volume = int(row_cells[2].get_text())
+        except ValueError:
+            volume = None
+        chapter_string = row_cells[3].get_text()
 
-    max_index = max(len(chapters), len(scanlation_groups))
-    chapter_release_info = list(zip(chapters[:max_index], scanlation_groups[:max_index]))
-    chapter_release_info.sort(key=lambda zip_chapter: '-' in str(zip_chapter[0]))
+        group = row_cells[4].get_text()
 
-    scrapped_chapters_releases = []
-    for chapter, group in chapter_release_info:
-        for split_chapter in chapter.split('-'):
-            scrapped_chapters_releases.append(ScrappedReleases.ScrappedChapterRelease(split_chapter, group))
-
-    if warning_message:
-        warning_message += \
-            f'</br>For serie : {serie_page_mark.serie_id}: display might be wrong. original display was : ' \
-            f'</br><div>{latest_release_div_soup.prettify()}</div>'
-        warnings.warn(warning_message, ScrappingWarning)
-    result_queue.put(ScrappedReleases(serie_page_mark.serie_id, scrapped_chapters_releases, warning_message))
+        for chapters_elements in chapter_string.split('+'):
+            if '-' in chapters_elements:
+                chapters = chapters_elements.split('-')
+            else:
+                chapters = [chapters_elements]
+            scrapped_chapters.extend(ScrappedChapterRelease(group, chapter, volume)
+                                     for chapter in chapters)
+            # no interpolation as inference rule is too complex to code as of now given the diversity of possibilities.
+    return ScrappedReleases(serie_id, scrapped_chapters)

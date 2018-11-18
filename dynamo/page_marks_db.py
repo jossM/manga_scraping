@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Dict, Any
 import warnings
 
-from chapter_type import Chapter
+from global_types import Chapter
 from dynamo import base_type
 
 
