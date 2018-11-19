@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError
 import warnings
 
 from config import ERROR_FLAG
-from dynamo import page_marks_db
+import page_marks_db
 import skraper
 import release_formating
 
