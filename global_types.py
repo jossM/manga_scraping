@@ -104,3 +104,7 @@ class Chapter(Serializable):
     @classmethod
     def deserialize(cls, dict_data: Dict[str, Union[int, str]]) -> 'Chapter':
         return cls(**dict_data)
+
+
+class MailMessage:
+    pass  # todo

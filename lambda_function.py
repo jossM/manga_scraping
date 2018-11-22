@@ -17,8 +17,8 @@ def handler_scheduled_scraping(event, context):
 
         pool = ThreadPoolExecutor(max_workers=3) # why 3 ... because it's a thread so GIL apply it's more than 1 and not too high
         scrap_stream = pool.map(skraper.scrap_bakaupdate, [page_mark.serie_id for page_mark in page_marks], timeout=60)
+        scraped_serie_ids = set()
         try:
-            scraped_serie_ids = set()
             for scrapped_releases in scrap_stream:
                 scraped_serie_ids.add(scrapped_releases.serie_id)
                 if not scrapped_releases.serie_id in page_marks_map:
@@ -30,14 +30,10 @@ def handler_scheduled_scraping(event, context):
                 serie_page_mark = page_marks_map[scrapped_releases.serie_id]
                 if not scrapped_releases.releases:
                     continue
-                new_releases = sorted([release for release in scrapped_releases
-                                       if release not in serie_page_mark.chapter_mark],
-                                      reverse= True)
-                if not new_releases:
+                formatted_new_releases = release_formating.format_new_release(new_releases)
+                if not formatted_new_releases:
                     continue
-                new_releases_with_link = [release_formating._add_likely_link(previous_page_marks.serie_name, release)
-                                          for release in new_releases]
-                mail_message.add_releases(serie_name=previous_page_marks.serie_name, releases=new_releases_with_link)
+                mail_message.add_releases(serie_name=scrapped_releases.serie_name, releases=new_releases_with_link)
         except TimeoutError:  # catches scrap_stream timeout that are raised when calling next in for iterator
             pass  # todo
 

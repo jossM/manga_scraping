@@ -1,18 +1,21 @@
 import copy
 import os
 import traceback
-from typing import Union, Iterable
+from typing import Union, Iterable, List
 import warnings
 
 from apiclient import discovery
 
 from config import ERROR_FLAG
 from global_types import Chapter
+from page_marks_db import PageMark
 from skraper import ScrappedChapterRelease, ScrappedReleases
+
 
 class FormattingWarning(Warning):
     """ Any issue during formatting of release will have this type """
     pass
+
 
 class FormattedScrappedChapterRelease(ScrappedChapterRelease):
     """ data to be displayed for a single release """
@@ -67,24 +70,28 @@ def _add_likely_link(serie_name: str, release: Union[ScrappedChapterRelease, For
     if exception_traceback is not None:
         warnings.warn(f'{ERROR_FLAG}\n{exception_traceback}')
         return result
-    if not search_responce or not search_responce.get('items', []):
+    if not search_responce or not search_responce.get('items', None):
         return FormattedScrappedChapterRelease(release)
     first_item = search_responce['items'][0]
     result.link = first_item.get('link', None)
     return result
 
 
-def _get_top_releases(scraped_releases: Iterable[ScrappedChapterRelease],
-                      chapters_page_mark: Iterable[Chapter],
-                      max_chapter_limit: int= 5) -> Iterable[ScrappedChapterRelease]:
-    """ returns releases that are 'hot' as defined by previous page mark chapter and max_chapter_limit"""
-    chapters_page_mark = sorted(chapters_page_mark, reverse=True)
-    limiting_chapter = chapters_page_mark[-min(len(chapters_page_mark), max_chapter_limit)]
-    for release in scraped_releases:
-        if not release > limiting_chapter:
-            continue
-        yield release
-
-
-def format_release(scrapped_releases: ScrappedReleases) -> FormattedScrappedReleases:
-    pass # todo:
+def format_and_filter_releases(scrapped_releases: ScrappedReleases,
+                               serie_page_mark: PageMark,
+                               top_chapter_lim: int= 5
+                               ) -> FormattedScrappedReleases:
+    """ returns new releases with links and information of whether they are top chapters as defined by
+     top_chapter_limit"""
+    new_releases = sorted([release for release in scrapped_releases if release not in serie_page_mark.chapter_marks],
+                          reverse=True)
+    chapters_page_mark = sorted(serie_page_mark.chapter_marks, reverse=True)
+    limiting_chapter = chapters_page_mark[-min(len(chapters_page_mark), top_chapter_lim)]
+    formated_scrapped_new_chapter_release = [_add_likely_link(serie_page_mark.serie_name, release) for release in new_releases]
+    for release in formated_scrapped_new_chapter_release:
+        release.top = release > limiting_chapter
+    return FormattedScrappedReleases(
+        serie_id=serie_page_mark.serie_id,
+        serie_html_title=serie_page_mark.serie_name,
+        serie_img_link='',  #todo
+        chapters_releases=formated_scrapped_new_chapter_release)
