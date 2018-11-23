@@ -39,6 +39,9 @@ class ScrappedReleases(Sequence):
     def __len__(self) -> int:
         return len(self.releases)
 
+    def __bool__(self):
+        return bool(self.releases)
+
     def __repr__(self) -> str:
         rep = f"Available releases for serie {self.serie_id}:"
         releases = '\n'.join(f"{release} \tby group {release.group}" for release in self.releases)

@@ -1,13 +1,12 @@
 import copy
 import os
 import traceback
-from typing import Union, Iterable, List
+from typing import Union, Iterable
 import warnings
 
 from apiclient import discovery
 
 from config import ERROR_FLAG
-from global_types import Chapter
 from page_marks_db import PageMark
 from skraper import ScrappedChapterRelease, ScrappedReleases
 
@@ -77,7 +76,7 @@ def _add_likely_link(serie_name: str, release: Union[ScrappedChapterRelease, For
     return result
 
 
-def format_and_filter_releases(scrapped_releases: ScrappedReleases,
+def filter_and_format_releases(scrapped_releases: ScrappedReleases,
                                serie_page_mark: PageMark,
                                top_chapter_lim: int= 5
                                ) -> FormattedScrappedReleases:
