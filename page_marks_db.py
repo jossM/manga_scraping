@@ -1,16 +1,16 @@
 from datetime import datetime
 import inspect
-import os
 import pytz
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any, Union, Iterable
 import warnings
 
 import boto3
 
+from config import AWS_REGION
 from global_types import Chapter, Serializable
 
 
-dynamodb = boto3.resource('dynamodb', region_name=os.environ.get('AWS_REGION'))
+dynamodb = boto3.resource('dynamodb', region_name=AWS_REGION)
 
 
 class CorruptedDynamoDbBase(UserWarning):
@@ -26,22 +26,13 @@ class PageMark(Serializable):
                  serie_name: Union[str, None]=None,
                  latest_update: Union[datetime, None]=None,
                  chapter_marks: Union[List[Chapter], None]= None):
-        self.serie_id = serie_id
+        self._serie_id = serie_id
         self.serie_name = serie_name
         self.latest_update = latest_update
         if chapter_marks is None:
-            self.chapter_marks = []
+            self.chapter_marks : List[Chapter]= []
         else:
-            self.chapter_marks = chapter_marks
-
-    def put(self) -> None:
-        type(self).DYNAMO_TABLE.put_item(Item=self.serialize())
-
-    @classmethod
-    def get_all(cls) -> List['PageMark']:
-        response = cls.DYNAMO_TABLE.scan(ProjectionExpression=', '.join(cls.get_dynamo_db_attributes()))
-        return [cls.deserialize(page_mark_elem) for page_mark_elem in response['Items']]
-
+            self.chapter_marks : List[Chapter]= sorted(chapter_marks, reverse=True)
 
     @classmethod
     def get_dynamo_db_attributes(cls):
@@ -49,7 +40,38 @@ class PageMark(Serializable):
         attributes.remove('self')
         return attributes
 
+    @property
+    def serie_id(self) -> str:
+        """ serie id is immutable """
+        return self.serie_id
+
+    def __hash__(self) -> str:
+        return self._serie_id
+
+    def __contains__(self, item: Chapter) -> bool:
+        return item in self.chapter_marks
+
+    def __repr__(self) -> str:
+        # todo
+        pass
+
+    @classmethod
+    def put_multi(cls, page_marks: Iterable['PageMark']) -> None:
+        """ writes on dynamodb table"""
+        cls.DYNAMO_TABLE.put_multi(Items=page_marks) # todo check if method is called this way
+
+    def put(self) -> None:
+        """ writes on dynamodb table"""
+        type(self).DYNAMO_TABLE.put_item(Item=self.serialize())
+
+    @classmethod
+    def get_all(cls) -> List['PageMark']:
+        """ get all object from dynamodb table"""
+        response = cls.DYNAMO_TABLE.scan(ProjectionExpression=', '.join(cls.get_dynamo_db_attributes()))
+        return [cls.deserialize(page_mark_elem) for page_mark_elem in response['Items']]
+
     def serialize(self) -> Dict[str, Any]:
+        """ transform the object into a dict to allow storage """
         serialized_mark = dict(serie_id=self.serie_id)
         if self.serie_name is not None:
             serialized_mark['serie_name'] = self.serie_name
@@ -61,6 +83,7 @@ class PageMark(Serializable):
 
     @classmethod
     def deserialize(cls, dict_data: Dict) -> 'PageMark':
+        """ transform a dict into an objet. may trigger warnings if object does not have the correct format """
         deserialized_page_mark = cls(dict_data['serie_id'])
         warning_message = f'Corrupted PageMark document for serie id {deserialized_page_mark.serie_id}.'
         initial_warning_message_len = len(warning_message)
@@ -96,3 +119,27 @@ class PageMark(Serializable):
         if len(warning_message) > initial_warning_message_len:
             warnings.warn(warning_message, CorruptedDynamoDbBase)
         return deserialized_page_mark
+
+    def extend(self, chapters: Iterable[Chapter]) -> 'PageMark':
+        """ offers easy implementation to add chapters to chapter marks """
+        new_chapter_marks = [chapter for chapter in chapters if chapter not in self]
+        self.chapter_marks = sorted(new_chapter_marks + self.chapter_marks,  reverse=True)
+        return self
+
+    def add(self, chapter: Chapter) -> 'PageMark':
+        """ offers easy implementation to add chapters to chapter marks """
+        self.chapter_marks = sorted([chapter] + self.chapter_marks,  reverse=True)
+        return self
+
+    def update(self,
+               serie_name: str=None,
+               latest_update: datetime=None,
+               chapter_marks: List[Chapter]=None) -> 'PageMark':
+        """ update the values of the object and crushes existing values in place """
+        if serie_name is not None:
+            self.serie_name = serie_name
+        if latest_update is not None:
+            self.latest_update = latest_update
+        if chapter_marks is not None:
+            self.chapter_marks = chapter_marks
+        return self
