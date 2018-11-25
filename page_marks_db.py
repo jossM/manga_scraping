@@ -43,7 +43,7 @@ class PageMark(Serializable):
     @property
     def serie_id(self) -> str:
         """ serie id is immutable """
-        return self.serie_id
+        return self._serie_id
 
     def __hash__(self) -> str:
         return self._serie_id
