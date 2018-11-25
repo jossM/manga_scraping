@@ -13,7 +13,7 @@ import release_formating
 
 
 def handler_scheduled_scraping(event, context):
-    uid_str = uuid.UUID().hex
+    uid_str = uuid.uuid4().hex
     updated_serie_releases: List[release_formating.FormattedScrappedReleases] = []
     # scraping
     with warnings.catch_warnings(record=True) as catched_triggered_warnings:
