@@ -32,11 +32,11 @@ class FormattedScrappedReleases(ScrappedReleases):
     """ data to be displayed for a serie """
     def __init__(self,
                  serie_id: str,
-                 serie_html_title: str,
+                 serie_title: str,
                  serie_img_link: str,
                  chapters_releases: Iterable[FormattedScrappedChapterRelease]):
         super(FormattedScrappedReleases, self).__init__(serie_id, chapters_releases)
-        self.serie_html_title = serie_html_title
+        self.serie_title = serie_title
         self.serie_img_link = serie_img_link
 
 

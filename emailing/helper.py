@@ -1,62 +1,70 @@
+from math import ceil, floor
 from typing import List
+import warnings
 
 import boto3
 from botocore.exceptions import ClientError
 
-from config import SENDING_EMAIL, RECEIVING_EMAIL, AWS_REGION, SES_CONFIGURATION_SET
-
+from config import SENDING_EMAIL, RECEIVING_EMAILS, AWS_REGION, SES_CONFIGURATION_SET
+from logs import logger
 from release_formating import FormattedScrappedReleases
 
 client = boto3.client('ses', region_name=AWS_REGION)
 
 CHARSET = "UTF-8"
+SPACES_PER_TAB = 4
 
 
-def build_body(
+def build_html_body(
         formatted_scrapped_releases: List[FormattedScrappedReleases],
         triggered_warnings: List[Warning]) -> str:
-    pass
+    return 'ToDo'
+
+
+def build_txt_body(
+        formatted_scrapped_releases: List[FormattedScrappedReleases],
+        triggered_warnings: List[Warning]) -> str:
+    string_body = "Hello,\n"
+    if not formatted_scrapped_releases:
+        string_body += 'no new release were available for your series.\n'
+    else:
+        titles = sorted([serie.serie_title for serie in formatted_scrapped_releases],
+                        key=lambda title: len(title),reverse=True)
+        ninth_longuest_title = titles[ceil(float(len(titles))*.9)]
+        serie_name_tab_number = int(ceil(float(len(ninth_longuest_title)) / SPACES_PER_TAB))
+        series_strings = []
+        for formatted_scrapped_release in formatted_scrapped_releases:
+            title_tab_number = floor(float(len(formatted_scrapped_release.serie_title) - len(ninth_longuest_title))
+                                     / SPACES_PER_TAB)
+            serie_string = formatted_scrapped_release.serie_title + '\t'*title_tab_number
+            releases_strings = []
+            for release in formatted_scrapped_release:
+                release_string = ''
+                if release.top:
+                    release_string = ' Top -> '
+                release_string += f'{release}\t{release.link}'
+                releases_strings.append(release_string)
+            serie_string += ('\t'*serie_name_tab_number + '\n').join(releases_strings)
+            series_strings.append(serie_string)
+        string_body += '\r\n'.join(series_strings)
+    if triggered_warnings:
+        string_body += '\n\t\t'.join(str(warning) for warning in triggered_warnings)
+    return string_body
 
 
 def send(subject: str, html_body: str, text_body: str, recipients: List[str]=None):
     if recipients is None:
-        recipients = [RECEIVING_EMAIL]
-    # ConfigurationSetName=CONFIGURATION_SET argument below.
-
-    BODY_TEXT = ("Amazon SES Test (Python)\r\n"
-                 "This email was sent with Amazon SES using the "
-                 "AWS SDK for Python (Boto).")
-
-    # The HTML body of the email.
-    BODY_HTML = """
-    <html>
-    <head></head>
-    <body>
-      <h1>Amazon SES Test (SDK for Python)</h1>
-      <p>This email was sent with
-        <a href='https://aws.amazon.com/ses/'>Amazon SES</a> using the
-        <a href='https://aws.amazon.com/sdk-for-python/'>
-          AWS SDK for Python (Boto)</a>.</p>
-    </body>
-    </html>
-     """
-
+        recipients = RECEIVING_EMAILS
     try:
-        # Provide the contents of the email.
         response = client.send_email(
-            Destination={ 'ToAddresses': recipients},
+            Destination={'ToAddresses': recipients},
             Message={
-                'Body': { 'Html': { 'Charset': CHARSET, 'Data': html_body },
-                          'Text': { 'Charset': CHARSET, 'Data': text_body } },
-                'Subject': { 'Charset': CHARSET, 'Data': subject }},
+                'Body': {'Html': {'Charset': CHARSET, 'Data': html_body},
+                         'Text': {'Charset': CHARSET, 'Data': text_body}},
+                'Subject': {'Charset': CHARSET, 'Data': subject}},
             Source=SENDING_EMAIL,
-            # If you are not using a configuration set, comment or delete the
-            # following line
-            ConfigurationSetName=SES_CONFIGURATION_SET,
-        )
-    # Display an error if something goes wrong.
+            ConfigurationSetName=SES_CONFIGURATION_SET)
     except ClientError as e:
-        print(e.response['Error']['Message'])
+        logger.error(e.response['Error']['Message'])
     else:
-        print("Email sent! Message ID:"),
-        print(response['MessageId'])
+        logger.info(f"Email sent! Message ID: {response['MessageId']}")

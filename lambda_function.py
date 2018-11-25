@@ -1,19 +1,15 @@
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from datetime import datetime
-import logging
 from typing import List, Set
 import uuid
 import warnings
 
 from config import ERROR_FLAG
 import emailing
+from logs import logger
 from page_marks_db import PageMark
 import skraper
 import release_formating
-
-
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
 
 
 def handler_scheduled_scraping(event, context):
@@ -24,7 +20,7 @@ def handler_scheduled_scraping(event, context):
         page_marks = PageMark.get_all()
         page_marks_map = {page_mark.serie_id: page_mark for page_mark in page_marks}
 
-        # why 3 ... because it's a thread so GIL apply it's more than 1 and not too high
+        # why 3 ... because it's a thread, so GIL apply, and it's more than 1 while not being too high
         pool = ThreadPoolExecutor(max_workers=3)
         scrap_stream = pool.map(skraper.scrap_bakaupdate, [page_mark.serie_id for page_mark in page_marks], timeout=60)
         scrapped_serie_page_marks: Set[PageMark] = set()
@@ -65,7 +61,8 @@ def handler_scheduled_scraping(event, context):
         logger.info(f'{uid_str}-scrapped_series :\n'
                     + '\n'.join(serie.serie_name for serie in scrapped_serie_page_marks))
         return
-    html_mail_body = emailing.helper.build_body(updated_serie_releases, triggered_warnings)
-    html_txt_body = emailing.helper.build_body(updated_serie_releases, triggered_warnings)
+    html_mail_body = emailing.helper.build_html_body(updated_serie_releases, triggered_warnings)
+    html_txt_body = emailing.helper.build_txt_body(updated_serie_releases, triggered_warnings)
     date_str = datetime.now().strftime("%a %d-%b")
     emailing.helper.send(f'Manga Newsletter - {date_str}', html_mail_body, html_txt_body)  # send mail
+    PageMark.put_multi(scrapped_serie_page_marks)

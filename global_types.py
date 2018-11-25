@@ -4,12 +4,12 @@ import re
 from typing import Union
 import warnings
 
-_SerializableClass = TypeVar['_SerializableClass']
+_SerializableClass = TypeVar('_SerializableClass')
 
 
 class Serializable(Generic[_SerializableClass]):
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def deserialize(cls, dict_data: Dict) -> _SerializableClass:
         ...
 
