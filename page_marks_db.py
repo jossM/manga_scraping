@@ -58,8 +58,9 @@ class PageMark(Serializable):
     @classmethod
     def put_multi(cls, page_marks: Iterable['PageMark']) -> None:
         """ writes on dynamodb table"""
-        cls.DYNAMO_TABLE.batch_write_item(RequestItems=[
-            {'PutRequest': {'Item': page_mark.serialize()}} for page_mark in page_marks])
+        with cls.DYNAMO_TABLE.batch_writer() as batch:
+            for page_mark in page_marks:
+                batch.put_item(Item=page_mark.serialize())
 
     def put(self) -> None:
         """ writes on dynamodb table"""
