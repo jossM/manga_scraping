@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import requests
 
 import global_types
+from logs import logger
 
 
 class ScrappingWarning(UserWarning):
@@ -69,9 +70,10 @@ def scrap_bakaupdate(serie_id: str) -> ScrappedReleases:
         if not row_cells:
             continue
         if len(row_cells) != 5:
-            warnings.warn(f"row {row_number} for {context_message} does not have 5 cells\n "
-                          f"Row was:\n {repr(row)}",
-                          ScrappingWarning)
+            message = (f"row {row_number} for {context_message} does not have 5 cells\n "
+                       f"Row was:\n {repr(row)}")
+            warnings.warn(message, ScrappingWarning)
+            logger.error(message)
             continue
         try:
             volume = int(row_cells[2].get_text())

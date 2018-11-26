@@ -13,7 +13,7 @@ import release_formating
 
 
 def handler_scheduled_scraping(event, context):
-    uid_str = uuid.uuid4().hex
+    uid_str = uuid.uuid4().hex  # todo: pass uuid in logger to make arg by default uuid at the start of messages
     updated_serie_releases: List[release_formating.FormattedScrappedReleases] = []
     # scraping
     with warnings.catch_warnings(record=True) as catched_triggered_warnings:
@@ -27,9 +27,11 @@ def handler_scheduled_scraping(event, context):
         try:
             for scrapped_releases in scrap_stream:
                 if scrapped_releases.serie_id not in page_marks_map:
-                    warnings.warn(f'{ERROR_FLAG} inconsistent execution :\n'
-                                  f'serie id {scrapped_releases.serie_id} was present in scrap stream '
-                                  f'but this value is missing from DB')
+                    error_message = ('inconsistent execution :\n'
+                                     f'serie id {scrapped_releases.serie_id} was present in scrap stream '
+                                     f'but this value is missing from DB')
+                    warnings.warn(f'{ERROR_FLAG} {error_message}')
+                    logger.error(error_message)
                     # avoid raising to still send the mail with the warning
                     continue
                 serie_page_mark: PageMark = page_marks_map[scrapped_releases.serie_id]
@@ -47,20 +49,26 @@ def handler_scheduled_scraping(event, context):
         except TimeoutError as e:  # catches scrap_stream timeout that are raised when calling next in for iterator
             missed_serie_page_marks = set(page_marks) - scrapped_serie_page_marks
             if not missed_serie_page_marks:
-                warnings.warn('Got a time out on serie scraping but no serie is missing. ' + str(e))
+                error_message = 'Got a time out on serie scraping but no serie is missing. Timeout exception :' + str(e)
+                warnings.warn(error_message)
+                logger.warning(error_message)
             else:
-                warnings.warn(f'Scraping of the following series timed out : {missed_serie_page_marks}. ' + str(e))
+                error_message = (f'Scraping timed out before the handling of the following series  : '
+                                 f'{missed_serie_page_marks}. Exception : ' + str(e))
+                warnings.warn(error_message)
+                logger.warning(error_message)
         triggered_warnings = list(catched_triggered_warnings)
-        logger.info(f'{uid_str}-End of scrapping .')
-        for triggered_warning in triggered_warnings:
-            logger.warning(f'{uid_str}-', triggered_warning)
+        logger.info(f'{uid_str}-End of scrapping for all series.')
 
     if not triggered_warnings and not updated_serie_releases:
-        logger.info('nothing to send.')
+        logger.info('nothing to send. Stopping lambda ')
+        return
     elif updated_serie_releases:
         logger.info(f'{uid_str}-scrapped_series :\n'
-                    + '\n'.join(serie.serie_name for serie in scrapped_serie_page_marks))
-        return
+                    + '\n'.join(f'{serie.serie_name} (id: {serie.serie_id})' for serie in scrapped_serie_page_marks))
+    else:
+        logger.info(f'{uid_str}-no scrapped_series to send. Sending warnings.')
+
     html_mail_body = emailing.helper.build_html_body(updated_serie_releases, triggered_warnings)
     html_txt_body = emailing.helper.build_txt_body(updated_serie_releases, triggered_warnings)
     date_str = datetime.now().strftime("%a %d-%b")

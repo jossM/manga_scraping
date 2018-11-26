@@ -4,6 +4,8 @@ import re
 from typing import Union
 import warnings
 
+from logs import logger
+
 _SerializableClass = TypeVar('_SerializableClass')
 
 
@@ -84,7 +86,9 @@ class Chapter(Serializable):
         try:
             return float(self.chapter)
         except (ValueError, TypeError):
-            warnings.warn(f'Unsupported chapter type for comparison {self.chapter}', UnknownChapterFormat)
+            error_message = f'Unsupported chapter type for comparison {self.chapter}'
+            warnings.warn(error_message, UnknownChapterFormat)
+            logger.warning(error_message)
         return 0
 
     def is_valid(self):
