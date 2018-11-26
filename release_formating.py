@@ -1,12 +1,12 @@
 import copy
-import os
 import traceback
 from typing import Union, Iterable
 import warnings
 
 from apiclient import discovery
 
-from config import ERROR_FLAG
+from config import ERROR_FLAG, CSE_MANGA_PERSO_ID, CSE_MANGA_PERSO_KEY
+from logs import logger
 from page_marks_db import PageMark
 from skraper import ScrappedChapterRelease, ScrappedReleases
 
@@ -40,40 +40,55 @@ class FormattedScrappedReleases(ScrappedReleases):
         self.serie_img_link = serie_img_link
 
 
-google_customsearch_service = discovery.build("customsearch", "v1", developerKey=os.environ.get('CSE_MANGA_PERSO_KEY'))
+google_customsearch_service = discovery.build("customsearch", "v1", developerKey=CSE_MANGA_PERSO_KEY)
 
 
-def _add_likely_link(serie_name: str, release: Union[ScrappedChapterRelease, FormattedScrappedChapterRelease]) -> FormattedScrappedChapterRelease:
-    """ Performs a query on a google custom search and adds the first hit as potential link.
-     If no relevant is found, set link to None"""
-    cse = google_customsearch_service.cse()
-    exception_traceback = None
-    search_responce = {}
-    if isinstance(release, ScrappedChapterRelease):
-        result = FormattedScrappedChapterRelease(release)
-    else:
-        result = copy.deepcopy(release)
-    for attempt in range(5):
-        try:
-            search_responce = cse\
-                .list(q=f'manga {serie_name} {release.group}',
-                      cx=os.environ.get('CSE_MANGA_PERSO_ID'),
-                      exactTerms=str(release.chapter),
-                      safe='off',
-                      siteSearchFilter='e', # exclusion of following site
-                      siteSearch='www.mangaupdates.com')\
-                .execute()
-            exception_traceback = None
-        except:
-            exception_traceback = traceback.format_exc()
-    if exception_traceback is not None:
-        warnings.warn(f'{ERROR_FLAG}\n{exception_traceback}')
+class _SearchEngine(object):
+    request_number = 0
+
+    @classmethod
+    def add_likely_link(
+            cls,
+            serie_name: str,
+            release: Union[ScrappedChapterRelease, FormattedScrappedChapterRelease]) -> FormattedScrappedChapterRelease:
+        """ Performs a query on a google custom search and adds the first hit as potential link.
+         If no relevant is found, set link to None"""
+        cse = google_customsearch_service.cse()
+        exception_traceback = None
+        search_response = {}
+        if isinstance(release, ScrappedChapterRelease):
+            result = FormattedScrappedChapterRelease(release)
+        else:
+            result = copy.deepcopy(release)
+
+        for attempt in range(5):
+            try:
+                search_response = cse\
+                    .list(q=f'manga {serie_name} {release.group}',
+                          cx=CSE_MANGA_PERSO_ID,
+                          exactTerms=str(release.chapter),
+                          safe='off',
+                          siteSearchFilter='e', # exclusion of following site
+                          siteSearch='www.mangaupdates.com')\
+                    .execute()
+                cls.request_number += 1
+                exception_traceback = None
+            except:
+                exception_traceback = traceback.format_exc()
+                logger.error(f'failed attempt to add likely link : {exception_traceback}')
+            if exception_traceback is None:
+
+                break
+        if exception_traceback is not None:
+            error_message = f'failed to add likely link after {attempt} attempt {exception_traceback}'
+            warnings.warn(f'{ERROR_FLAG}\n{error_message}')
+            logger.error(error_message)
+            return result
+        if not search_response or not search_response.get('items', None):
+            return FormattedScrappedChapterRelease(release)
+        first_item = search_response['items'][0]
+        result.link = first_item.get('link', None)
         return result
-    if not search_responce or not search_responce.get('items', None):
-        return FormattedScrappedChapterRelease(release)
-    first_item = search_responce['items'][0]
-    result.link = first_item.get('link', None)
-    return result
 
 
 def filter_and_format_releases(scrapped_releases: ScrappedReleases,
@@ -85,12 +100,27 @@ def filter_and_format_releases(scrapped_releases: ScrappedReleases,
     new_releases = sorted([release for release in scrapped_releases if release not in serie_page_mark.chapter_marks],
                           reverse=True)
     chapters_page_mark = sorted(serie_page_mark.chapter_marks, reverse=True)
-    limiting_chapter = chapters_page_mark[-min(len(chapters_page_mark), top_chapter_lim)]
-    formated_scrapped_new_chapter_release = [_add_likely_link(serie_page_mark.serie_name, release) for release in new_releases]
-    for release in formated_scrapped_new_chapter_release:
-        release.top = release > limiting_chapter
+    if chapters_page_mark:
+        limiting_chapter = chapters_page_mark[-min(len(chapters_page_mark), top_chapter_lim)]
+
+        def is_top(release):
+            return release > limiting_chapter
+    else:
+        def is_top(_):
+            return True
+    formatted_scrapped_new_chapter_release = []
+    number_of_request_before = _SearchEngine.request_number
+    for release in new_releases:
+        formatted_release = _SearchEngine.add_likely_link(serie_page_mark.serie_name, release)
+        formatted_release.top = is_top(release)
+        formatted_scrapped_new_chapter_release.append(formatted_release)
+    logging_message = f'Requested api {_SearchEngine.request_number - number_of_request_before} time(s)'\
+                      f' for serie id {serie_page_mark.serie_id}'
+    if serie_page_mark.serie_name:
+        logging_message += f' (name {serie_page_mark.serie_name})'
+    logger.info(logging_message)
     return FormattedScrappedReleases(
         serie_id=serie_page_mark.serie_id,
-        serie_html_title=serie_page_mark.serie_name,
+        serie_title=serie_page_mark.serie_name,
         serie_img_link='',  #todo
-        chapters_releases=formated_scrapped_new_chapter_release)
+        chapters_releases=formatted_scrapped_new_chapter_release)
