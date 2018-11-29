@@ -122,5 +122,5 @@ def filter_and_format_releases(scrapped_releases: ScrappedReleases,
     return FormattedScrappedReleases(
         serie_id=serie_page_mark.serie_id,
         serie_title=serie_page_mark.serie_name,
-        serie_img_link='',  #todo
+        serie_img_link=serie_page_mark.img_link,
         chapters_releases=formatted_scrapped_new_chapter_release)

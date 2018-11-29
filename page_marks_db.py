@@ -24,10 +24,12 @@ class PageMark(Serializable):
     def __init__(self,
                  serie_id: str,
                  serie_name: Union[str, None]=None,
+                 img_link: Union[str, None]=None,
                  latest_update: Union[datetime, None]=None,
                  chapter_marks: Union[List[Chapter], None]= None):
         self._serie_id = serie_id
         self.serie_name = serie_name
+        self.img_link = img_link
         self.latest_update = latest_update
         if chapter_marks is None:
             self.chapter_marks : List[Chapter]= []
@@ -56,7 +58,7 @@ class PageMark(Serializable):
         pass
 
     @classmethod
-    def put_multi(cls, page_marks: Iterable['PageMark']) -> None:
+    def batch_put(cls, page_marks: Iterable['PageMark']) -> None:
         """ writes on dynamodb table"""
         with cls.DYNAMO_TABLE.batch_writer() as batch:
             for page_mark in page_marks:
@@ -81,6 +83,8 @@ class PageMark(Serializable):
             serialized_mark['latest_update'] = self.latest_update.astimezone(pytz.utc).isoformat()
         if self.chapter_marks:
             serialized_mark['chapter_marks'] = []
+        if self.img_link:
+            serialized_mark['img_link'] = self.img_link
         return serialized_mark
 
     @classmethod
@@ -97,6 +101,11 @@ class PageMark(Serializable):
             deserialized_page_mark.serie_name = dict_data['serie_name']
             warning_message += f' name "{serie_name}"'
             initial_warning_message_len = len(warning_message)
+        if 'img_link' not in dict_data:
+            warning_message += '\n"img_link" attribute is missing.'
+        else:
+            deserialized_page_mark.img_link = dict_data['img_link']
+
         if 'latest_update' in dict_data:
             try:
                 deserialized_page_mark.latest_update = datetime.fromisoformat(dict_data['latest_update'])
@@ -135,11 +144,14 @@ class PageMark(Serializable):
 
     def update(self,
                serie_name: str=None,
+               img_link: str=None,
                latest_update: datetime=None,
                chapter_marks: List[Chapter]=None) -> 'PageMark':
         """ update the values of the object and crushes existing values in place """
         if serie_name is not None:
             self.serie_name = serie_name
+        if img_link is not None:
+            self.img_link = img_link
         if latest_update is not None:
             self.latest_update = latest_update
         if chapter_marks is not None:

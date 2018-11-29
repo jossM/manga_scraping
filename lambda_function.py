@@ -73,4 +73,4 @@ def handler_scheduled_scraping(event, context):
     html_txt_body = emailing.helper.build_txt_body(updated_serie_releases, triggered_warnings)
     date_str = datetime.now().strftime("%a %d-%b")
     emailing.helper.send(f'Manga Newsletter - {date_str}', html_mail_body, html_txt_body)  # send mail
-    PageMark.put_multi(scrapped_serie_page_marks)
+    PageMark.batch_put(scrapped_serie_page_marks)
