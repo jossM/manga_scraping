@@ -13,7 +13,6 @@ import release_formating
 
 
 def handler_scheduled_scraping(event, context):
-    uid_str = uuid.uuid4().hex  # todo: pass uuid in logger to make arg by default uuid at the start of messages
     updated_serie_releases: List[release_formating.FormattedScrappedReleases] = []
     # scraping
     with warnings.catch_warnings(record=True) as catched_triggered_warnings:
@@ -26,6 +25,7 @@ def handler_scheduled_scraping(event, context):
         scrapped_serie_page_marks: Set[PageMark] = set()
         try:
             for scrapped_releases in scrap_stream:
+                print(scrapped_releases)
                 if scrapped_releases.serie_id not in page_marks_map:
                     error_message = ('inconsistent execution :\n'
                                      f'serie id {scrapped_releases.serie_id} was present in scrap stream '
@@ -39,7 +39,7 @@ def handler_scheduled_scraping(event, context):
                     continue
                 formatted_scrapped_new_releases = release_formating.filter_and_format_releases(
                     scrapped_releases.releases, serie_page_mark)
-                if formatted_scrapped_new_releases:
+                if not formatted_scrapped_new_releases:
                     continue
                 updated_serie_releases.append(formatted_scrapped_new_releases)
                 serie_page_mark\
@@ -58,19 +58,21 @@ def handler_scheduled_scraping(event, context):
                 warnings.warn(error_message)
                 logger.warning(error_message)
         triggered_warnings = list(catched_triggered_warnings)
-        logger.info(f'{uid_str}-End of scrapping for all series.')
+        logger.info(f'End of scrapping for all series.')
 
     if not triggered_warnings and not updated_serie_releases:
         logger.info('nothing to send. Stopping lambda ')
         return
     elif updated_serie_releases:
-        logger.info(f'{uid_str}-scrapped_series :\n'
+        logger.info(f'scrapped_series :\n'
                     + '\n'.join(f'{serie.serie_name} (id: {serie.serie_id})' for serie in scrapped_serie_page_marks))
     else:
-        logger.info(f'{uid_str}-no scrapped_series to send. Sending warnings.')
+        logger.info(f'No scrapped_series to send. Sending warnings.')
+    print(f'finaly over, registering\n{scrapped_serie_page_marks}')
+    print(f'releases were : \n{updated_serie_releases}')
 
     html_mail_body = emailing.helper.build_html_body(updated_serie_releases, triggered_warnings)
     html_txt_body = emailing.helper.build_txt_body(updated_serie_releases, triggered_warnings)
     date_str = datetime.now().strftime("%a %d-%b")
-    emailing.helper.send(f'Manga Newsletter - {date_str}', html_mail_body, html_txt_body)  # send mail
+    # emailing.helper.send(f'Manga Newsletter - {date_str}', html_mail_body, html_txt_body)  # send mail todo: remove comment
     PageMark.batch_put(scrapped_serie_page_marks)

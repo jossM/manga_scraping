@@ -63,8 +63,11 @@ class Chapter(Serializable):
     def __ne__(self, other: 'Chapter'):
         return not self.__eq__(other)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.volume, self.chapter))
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
     def __str__(self) -> str:  # used to serialize
         fromated_value = re.sub(r'e\+0+', 'e+', '{:.1e}'.format(self.get_chapter_val()))

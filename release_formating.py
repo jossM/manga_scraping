@@ -53,6 +53,12 @@ class _SearchEngine(object):
             release: Union[ScrappedChapterRelease, FormattedScrappedChapterRelease]) -> FormattedScrappedChapterRelease:
         """ Performs a query on a google custom search and adds the first hit as potential link.
          If no relevant is found, set link to None"""
+        return FormattedScrappedChapterRelease(release)
+
+    def real_add_likely_link(  # todo: rename to be real function used for formatting
+            cls,
+            serie_name: str,
+            release: Union[ScrappedChapterRelease, FormattedScrappedChapterRelease]) -> FormattedScrappedChapterRelease:
         cse = google_customsearch_service.cse()
         exception_traceback = None
         search_response = {}

@@ -1,4 +1,3 @@
-from collections import Sequence
 from typing import Iterable, Union
 import warnings
 
@@ -21,7 +20,7 @@ class ScrappedChapterRelease(global_types.Chapter):
         self.group = group
 
 
-class ScrappedReleases(Sequence):
+class ScrappedReleases:
     """ data returned from scrapping """
     def __init__(self,
                  serie_id: str,
@@ -29,13 +28,9 @@ class ScrappedReleases(Sequence):
         self.serie_id = serie_id
         self.releases = sorted(chapters_releases, reverse=True)
 
-    def __getitem__(self, item: int) -> ScrappedChapterRelease:
-        try:
-            return self.releases[item]
-        except IndexError:
-            raise TypeError(f'trying to access element number {item} while there are only {len(self)} element(s)')
-        except TypeError as e:
-            raise TypeError(str(e).replace('list', 'ScrappedReleases', count=1))
+    def __iter__(self):
+        for chapter_release in self.releases:
+            yield chapter_release
 
     def __len__(self) -> int:
         return len(self.releases)

@@ -1,6 +1,5 @@
 from math import ceil, floor
 from typing import List
-import warnings
 
 import boto3
 from botocore.exceptions import ClientError
@@ -29,13 +28,16 @@ def build_txt_body(
         string_body += 'no new release were available for your series.\n'
     else:
         titles = sorted([serie.serie_title for serie in formatted_scrapped_releases],
-                        key=lambda title: len(title),reverse=True)
-        ninth_longuest_title = titles[ceil(float(len(titles))*.9)]
+                        key=lambda title: len(title), reverse=True)
+        if titles:
+            ninth_longuest_title = titles[floor(len(titles)*.9)]
+        else:
+            ninth_longuest_title = ''
         serie_name_tab_number = int(ceil(float(len(ninth_longuest_title)) / SPACES_PER_TAB))
         series_strings = []
         for formatted_scrapped_release in formatted_scrapped_releases:
-            title_tab_number = floor(float(len(formatted_scrapped_release.serie_title) - len(ninth_longuest_title))
-                                     / SPACES_PER_TAB)
+            title_tab_number = \
+                floor((len(formatted_scrapped_release.serie_title) - len(ninth_longuest_title)) / SPACES_PER_TAB)
             serie_string = formatted_scrapped_release.serie_title + '\t'*title_tab_number
             releases_strings = []
             for release in formatted_scrapped_release:

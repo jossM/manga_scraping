@@ -32,9 +32,9 @@ class PageMark(Serializable):
         self.img_link = img_link
         self.latest_update = latest_update
         if chapter_marks is None:
-            self.chapter_marks : List[Chapter]= []
+            self.chapter_marks: List[Chapter] = []
         else:
-            self.chapter_marks : List[Chapter]= sorted(chapter_marks, reverse=True)
+            self.chapter_marks: List[Chapter] = sorted(chapter_marks, reverse=True)
 
     @classmethod
     def get_dynamo_db_attributes(cls):
@@ -47,15 +47,26 @@ class PageMark(Serializable):
         """ serie id is immutable """
         return self._serie_id
 
-    def __hash__(self) -> str:
-        return self._serie_id
+    def __hash__(self) -> int:
+        return hash(self._serie_id)
 
     def __contains__(self, item: Chapter) -> bool:
         return item in self.chapter_marks
 
+    def __iter__(self):
+        for chapter in self.chapter_marks:
+            yield chapter
+
     def __repr__(self) -> str:
-        # todo
-        pass
+        type_string = str(type(self))
+        header_sep = '\n\t'
+        chapter_sep = header_sep + '\t'
+        repr_string = f'{type_string}<' \
+                      f'{header_sep}serie: {self.serie_id}' \
+                      f'{header_sep}name: {self.serie_name}' \
+                      f'{header_sep}image link: {self.img_link}{chapter_sep}'
+        repr_string += chapter_sep.join(f'chapter {chapter}' for chapter in self) + '>'
+        return repr_string
 
     @classmethod
     def batch_put(cls, page_marks: Iterable['PageMark']) -> None:
@@ -82,7 +93,7 @@ class PageMark(Serializable):
         if self.latest_update is not None:
             serialized_mark['latest_update'] = self.latest_update.astimezone(pytz.utc).isoformat()
         if self.chapter_marks:
-            serialized_mark['chapter_marks'] = []
+            serialized_mark['chapter_marks'] = [chapter.serialize() for chapter in self.chapter_marks]
         if self.img_link:
             serialized_mark['img_link'] = self.img_link
         return serialized_mark
@@ -107,18 +118,13 @@ class PageMark(Serializable):
             deserialized_page_mark.img_link = dict_data['img_link']
 
         if 'latest_update' in dict_data:
-            try:
-                deserialized_page_mark.latest_update = datetime.fromisoformat(dict_data['latest_update'])
-            except ValueError:  # handles badly formatted dates
-                warning_message += \
-                    f'\nfailed to parse "latest_date" attribute as an iso 8601 date. Attribute value was ' \
-                    f'{dict_data["latest_update"]}'
+            deserialized_page_mark.latest_update = dict_data['latest_update']
 
         raw_chapter_marks = dict_data.get('chapter_marks', [])
         chapter_marks = list()
         for index_position, mark in enumerate(raw_chapter_marks):
             try:
-                chapter = Chapter(**mark)
+                chapter = Chapter.deserialize(mark)
                 if not chapter.is_valid():
                     warning_message += f' chapter_mark" attribute is invalid at position. {index_position},' \
                                        f' with key values "{str(mark)}"'
@@ -127,6 +133,7 @@ class PageMark(Serializable):
                 warning_message += f' chapter_mark" attribute is invalid at position. {index_position},' \
                                    f' with key values "{str(mark)}"'
         deserialized_page_mark.chapter_marks = sorted(chapter_marks, reverse=True)
+
         if len(warning_message) > initial_warning_message_len:
             warnings.warn(warning_message, CorruptedDynamoDbBase)
         return deserialized_page_mark
