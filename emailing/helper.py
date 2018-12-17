@@ -1,8 +1,11 @@
+from datetime import datetime
 from math import ceil, floor
+import os
 from typing import List
 
 import boto3
 from botocore.exceptions import ClientError
+from jinja2 import Environment, FileSystemLoader
 
 from config import SENDING_EMAIL, RECEIVING_EMAILS, AWS_REGION, SES_CONFIGURATION_SET
 from logs import logger
@@ -12,17 +15,33 @@ client = boto3.client('ses', region_name=AWS_REGION)
 
 CHARSET = "UTF-8"
 SPACES_PER_TAB = 4
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _make_todays_date() -> str:
+    """ build today's date as a standard format """
+    return datetime.now().strftime("%a %d-%b")
 
 
 def build_html_body(
         formatted_scrapped_releases: List[FormattedScrappedReleases],
-        triggered_warnings: List[Warning]) -> str:
-    return 'ToDo'
+        triggered_warnings: List[Warning], # todo: use this variable
+        serie_number: int) -> str:
+    """ creates an email body to be sent """
+    j2_env = Environment(loader=FileSystemLoader(THIS_DIR),
+                         trim_blocks=True,
+                         lstrip_blocks=True)
+    return j2_env.get_template('mail_template.html').render(
+        date_str=_make_todays_date(),
+        serie_number=serie_number,
+        all_series_releases=formatted_scrapped_releases
+    )
 
 
 def build_txt_body(
         formatted_scrapped_releases: List[FormattedScrappedReleases],
         triggered_warnings: List[Warning]) -> str:
+    """ builds a string as default display in case the html body was bad """
     string_body = "Hello,\n"
     if not formatted_scrapped_releases:
         string_body += 'no new release were available for your series.\n'
@@ -34,6 +53,7 @@ def build_txt_body(
         else:
             ninth_longuest_title = ''
         serie_name_tab_number = int(ceil(float(len(ninth_longuest_title)) / SPACES_PER_TAB))
+        line_start = '\n' + '\t'*serie_name_tab_number
         series_strings = []
         for formatted_scrapped_release in formatted_scrapped_releases:
             title_tab_number = \
@@ -43,18 +63,18 @@ def build_txt_body(
             for release in formatted_scrapped_release:
                 release_string = ''
                 if release.top:
-                    release_string = ' Top -> '
-                release_string += f'{release}\t{release.link}'
+                    release_string = 'Top -> '
+                release_string += f'{release}\t\t{release.link}'
                 releases_strings.append(release_string)
-            serie_string += ('\t'*serie_name_tab_number + '\n').join(releases_strings)
+            serie_string += line_start + line_start.join(releases_strings)
             series_strings.append(serie_string)
         string_body += '\r\n'.join(series_strings)
     if triggered_warnings:
-        string_body += '\n\t\t'.join(str(warning) for warning in triggered_warnings)
+        string_body += '\n\t' + '\n\t'.join(str(warning) for warning in triggered_warnings)
     return string_body
 
 
-def send(subject: str, html_body: str, text_body: str, recipients: List[str]=None):
+def send_newsletter(html_body: str, text_body: str, recipients: List[str]=None):
     if recipients is None:
         recipients = RECEIVING_EMAILS
     try:
@@ -63,7 +83,7 @@ def send(subject: str, html_body: str, text_body: str, recipients: List[str]=Non
             Message={
                 'Body': {'Html': {'Charset': CHARSET, 'Data': html_body},
                          'Text': {'Charset': CHARSET, 'Data': text_body}},
-                'Subject': {'Charset': CHARSET, 'Data': subject}},
+                'Subject': {'Charset': CHARSET, 'Data': f'Manga Newsletter - {_make_todays_date()}'}},
             Source=SENDING_EMAIL,
             ConfigurationSetName=SES_CONFIGURATION_SET)
     except ClientError as e:

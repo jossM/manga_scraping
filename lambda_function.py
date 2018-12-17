@@ -1,7 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from datetime import datetime
 from typing import List, Set
-import uuid
 import warnings
 
 from config import ERROR_FLAG
@@ -71,8 +70,8 @@ def handler_scheduled_scraping(event, context):
     print(f'finaly over, registering\n{scrapped_serie_page_marks}')
     print(f'releases were : \n{updated_serie_releases}')
 
-    html_mail_body = emailing.helper.build_html_body(updated_serie_releases, triggered_warnings)
-    html_txt_body = emailing.helper.build_txt_body(updated_serie_releases, triggered_warnings)
-    date_str = datetime.now().strftime("%a %d-%b")
-    # emailing.helper.send(f'Manga Newsletter - {date_str}', html_mail_body, html_txt_body)  # send mail todo: remove comment
-    PageMark.batch_put(scrapped_serie_page_marks)
+    html_mail = emailing.helper.build_html_body(updated_serie_releases, triggered_warnings, len(page_marks))
+    txt_mail = emailing.helper.build_txt_body(updated_serie_releases, triggered_warnings)
+    emailing.helper.send_newsletter(text_body=txt_mail, html_body=html_mail)
+    # PageMark.batch_put(scrapped_serie_page_marks)
+    return html_mail, txt_mail

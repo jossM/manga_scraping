@@ -69,11 +69,11 @@ class Chapter(Serializable):
     def __repr__(self) -> str:
         return self.__str__()
 
-    def __str__(self) -> str:  # used to serialize
+    def __str__(self) -> str:
         fromated_value = re.sub(r'e\+0+', 'e+', '{:.1e}'.format(self.get_chapter_val()))
         fromated_value = re.sub(r'e\+$', '', fromated_value)
         fromated_value = re.sub(r'\.0+', '', fromated_value)
-        return str(f'volume: {self.volume}, \tchapter: "{self.chapter}" (value: {fromated_value})')
+        return f'volume: {self.volume}, \tchapter: "{self.chapter}" (value: {fromated_value})'
 
     def get_chapter_val(self) -> float:
         """ implements parsing logic for manga chapters (prologue, oneshot, 24.1, 24 etc... """
@@ -111,7 +111,3 @@ class Chapter(Serializable):
     @classmethod
     def deserialize(cls, dict_data: Dict[str, Union[int, str]]) -> 'Chapter':
         return cls(**dict_data)
-
-
-class MailMessage:
-    pass  # todo
