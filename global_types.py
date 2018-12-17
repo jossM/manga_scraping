@@ -10,6 +10,7 @@ _SerializableClass = TypeVar('_SerializableClass')
 
 
 class Serializable(Generic[_SerializableClass]):
+    """ abstract class """
     @classmethod
     @abstractmethod
     def deserialize(cls, dict_data: Dict) -> _SerializableClass:
@@ -94,7 +95,8 @@ class Chapter(Serializable):
             logger.warning(error_message)
         return 0
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
+        """ whether the current chapter can be given an acceptable value or has a default one"""
         if self.volume is not None and not isinstance(self.volume, int):
             return False
         try:
@@ -104,10 +106,12 @@ class Chapter(Serializable):
         return True
 
     def serialize(self) -> Dict[str, Union[int, str]]:
+        """ transforms the objet into a dict to be stored in dynamodb """
         if self.volume is None:
             return dict(chapter=self.chapter)
         return dict(volume=self.volume, chapter=self.chapter)
 
     @classmethod
     def deserialize(cls, dict_data: Dict[str, Union[int, str]]) -> 'Chapter':
+        """ inverse of serialize method transforms a dict into a chapter """
         return cls(**dict_data)

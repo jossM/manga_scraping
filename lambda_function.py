@@ -12,6 +12,7 @@ import release_formating
 
 
 def handler_scheduled_scraping(event, context):
+    """ main function. """
     updated_serie_releases: List[release_formating.FormattedScrappedReleases] = []
     # scraping
     with warnings.catch_warnings(record=True) as catched_triggered_warnings:
@@ -23,7 +24,7 @@ def handler_scheduled_scraping(event, context):
         scrap_stream = pool.map(skraper.scrap_bakaupdate, [page_mark.serie_id for page_mark in page_marks], timeout=60)
         scrapped_serie_page_marks: Set[PageMark] = set()
         try:
-            for scrapped_releases in scrap_stream:
+            for scrapped_releases in scrap_stream:  # todo -> request google cse using concurrent for performance
                 print(scrapped_releases)
                 if scrapped_releases.serie_id not in page_marks_map:
                     error_message = ('inconsistent execution :\n'
