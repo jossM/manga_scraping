@@ -34,12 +34,12 @@ def handler_scheduled_scraping(event, context):
             if not missed_serie_page_marks:
                 error_message = f'Got a time out on serie scraping but no serie is missing. Timeout exception : {e}'
                 warnings.warn(error_message)
-                logger.warning(error_message)
+                logger.warning(error_message, exc_info=True)
             else:
                 error_message = ('Scraping timed out before the handling of the following series  : '
                                  f'{missed_serie_page_marks}. Exception : {e}')
                 warnings.warn(error_message)
-                logger.error(error_message)
+                logger.error(error_message, exc_info=True)
         triggered_warnings = list(catched_triggered_warnings)
         logger.info(f'End of scrapping for all series.')
 

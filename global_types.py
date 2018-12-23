@@ -92,7 +92,7 @@ class Chapter(Serializable):
         except (ValueError, TypeError):
             error_message = f'Unsupported chapter type for comparison {self.chapter}'
             warnings.warn(error_message, UnknownChapterFormat)
-            logger.warning(error_message)
+            logger.warning(error_message, exc_info=True)
         return 0
 
     def is_valid(self) -> bool:

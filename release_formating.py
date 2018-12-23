@@ -78,7 +78,7 @@ class _SearchEngine(object):
         if exception_traceback is not None:
             error_message = f'failed to add likely link after {attempt} attempt {exception_traceback}'
             warnings.warn(f'{error_message}', FormattingWarning)
-            logger.error(error_message)
+            logger.error(error_message, exc_info=True)
             return result
         if not search_response or not search_response.get('items', None):
             return FormattedScrappedChapterRelease(release)
@@ -98,7 +98,7 @@ def format_new_releases(scrapped_releases: ScrappedReleases,
                           reverse=True)
     chapters_page_mark = sorted(serie_page_mark.chapter_marks, reverse=True)
     if chapters_page_mark:
-        limiting_chapter = chapters_page_mark[-min(len(chapters_page_mark) - 1, top_chapter_lim)]
+        limiting_chapter = chapters_page_mark[-min(len(chapters_page_mark), top_chapter_lim)]
 
         def is_top(release):
             return release > limiting_chapter

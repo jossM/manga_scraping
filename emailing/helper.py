@@ -87,6 +87,6 @@ def send_newsletter(html_body: str, text_body: str, recipients: List[str]=None):
             Source=SENDING_EMAIL,
             ConfigurationSetName=SES_CONFIGURATION_SET)
     except ClientError as e:
-        logger.error(e.response['Error']['Message'])
+        logger.error(e.response['Error']['Message'], exc_info=True)
     else:
         logger.info(f"Email sent! Message ID: {response['MessageId']}")
