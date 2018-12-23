@@ -5,7 +5,7 @@ import warnings
 
 from apiclient import discovery
 
-from config import ERROR_FLAG, CSE_MANGA_PERSO_ID, CSE_MANGA_PERSO_KEY
+from config import CSE_MANGA_PERSO_ID, CSE_MANGA_PERSO_KEY
 from logs import logger
 from page_marks_db import PageMark
 from skraper import ScrappedChapterRelease, ScrappedReleases
@@ -71,39 +71,39 @@ class _SearchEngine(object):
                     .execute()
                 cls.request_number += 1
                 exception_traceback = None
-            except:
-                exception_traceback = traceback.format_exc()
-                logger.error(f'failed attempt to add likely link : {exception_traceback}')
+            except Exception as e:
+                exception_traceback = traceback.format_exc() + '\n' + repr(e)
             if exception_traceback is None:
-
                 break
         if exception_traceback is not None:
             error_message = f'failed to add likely link after {attempt} attempt {exception_traceback}'
-            warnings.warn(f'{ERROR_FLAG}\n{error_message}')
+            warnings.warn(f'{error_message}', FormattingWarning)
             logger.error(error_message)
             return result
         if not search_response or not search_response.get('items', None):
             return FormattedScrappedChapterRelease(release)
-        first_item = search_response['items'][0]
-        result.link = first_item.get('link', None)
+        try:
+            result.link = search_response['items'][0]['link']
+        except (IndexError, KeyError):
+            result.link = None
         return result
 
 
-def filter_and_format_releases(scrapped_releases: ScrappedReleases,
-                               serie_page_mark: PageMark,
-                               top_chapter_lim: int= 5
-                               ) -> FormattedScrappedReleases:
+def format_new_releases(scrapped_releases: ScrappedReleases,
+                        serie_page_mark: PageMark,
+                        top_chapter_lim: int= 5) -> FormattedScrappedReleases:
     """ returns new releases with links and information of whether they are top chapters as defined by
      top_chapter_limit"""
     new_releases = sorted([release for release in scrapped_releases if release not in serie_page_mark.chapter_marks],
                           reverse=True)
     chapters_page_mark = sorted(serie_page_mark.chapter_marks, reverse=True)
     if chapters_page_mark:
-        limiting_chapter = chapters_page_mark[-min(len(chapters_page_mark), top_chapter_lim)]
+        limiting_chapter = chapters_page_mark[-min(len(chapters_page_mark) - 1, top_chapter_lim)]
 
         def is_top(release):
             return release > limiting_chapter
     else:
+
         def is_top(_):
             return True
     formatted_scrapped_new_chapter_release = []

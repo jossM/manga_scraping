@@ -1,7 +1,7 @@
 from datetime import datetime
 import inspect
 import pytz
-from typing import List, Dict, Any, Union, Iterable
+from typing import List, Dict, Union, Iterable
 import warnings
 
 import boto3
@@ -12,6 +12,8 @@ from global_types import Chapter, Serializable
 
 dynamodb = boto3.resource('dynamodb', region_name=AWS_REGION)
 
+DYNAMO_TABLE = dynamodb.Table('manga_page_marks')
+
 
 class CorruptedDynamoDbBase(UserWarning):
     pass
@@ -19,7 +21,6 @@ class CorruptedDynamoDbBase(UserWarning):
 
 class PageMark(Serializable):
     """ ORM for table manga_page_marks on dynamodb"""
-    DYNAMO_TABLE = dynamodb.Table('manga_page_marks')
 
     def __init__(self,
                  serie_id: str,
@@ -35,12 +36,6 @@ class PageMark(Serializable):
             self.chapter_marks: List[Chapter] = []
         else:
             self.chapter_marks: List[Chapter] = sorted(chapter_marks, reverse=True)
-
-    @classmethod
-    def get_dynamo_db_attributes(cls):
-        attributes = list(inspect.signature(cls.__init__).parameters.keys())
-        attributes.remove('self')
-        return attributes
 
     @property
     def serie_id(self) -> str:
@@ -68,25 +63,13 @@ class PageMark(Serializable):
         repr_string += chapter_sep.join(f'chapter {chapter}' for chapter in self) + '>'
         return repr_string
 
-    @classmethod
-    def batch_put(cls, page_marks: Iterable['PageMark']) -> None:
-        """ writes on dynamodb table"""
-        with cls.DYNAMO_TABLE.batch_writer() as batch:
-            for page_mark in page_marks:
-                batch.put_item(Item=page_mark.serialize())
+    def extend(self, chapters: Iterable[Chapter]) -> 'PageMark':
+        """ offers easy implementation to add chapters to chapter marks """
+        new_chapter_marks = [chapter for chapter in chapters if chapter not in self]
+        self.chapter_marks = sorted(new_chapter_marks + self.chapter_marks,  reverse=True)
+        return self
 
-    def put(self) -> None:
-        """ writes on dynamodb table"""
-        type(self).DYNAMO_TABLE.put_item(Item=self.serialize())
-
-    @classmethod
-    def get_all(cls) -> List['PageMark']:
-        """ get all object from dynamodb table"""
-        response = cls.DYNAMO_TABLE.scan(ProjectionExpression=', '.join(cls.get_dynamo_db_attributes()))
-        return [cls.deserialize(page_mark_elem) for page_mark_elem in response['Items']]
-
-    def serialize(self) -> Dict[str, Any]:
-        """ transform the object into a dict to allow storage """
+    def serialize(self) -> Dict:
         serialized_mark = dict(serie_id=self.serie_id)
         if self.serie_name is not None:
             serialized_mark['serie_name'] = self.serie_name
@@ -101,7 +84,7 @@ class PageMark(Serializable):
     @classmethod
     def deserialize(cls, dict_data: Dict) -> 'PageMark':
         """ transform a dict into an objet. may trigger warnings if object does not have the correct format """
-        deserialized_page_mark = cls(dict_data['serie_id'])
+        deserialized_page_mark = cls(serie_id=dict_data['serie_id'])
         warning_message = f'Corrupted PageMark document for serie id {deserialized_page_mark.serie_id}.'
         initial_warning_message_len = len(warning_message)
 
@@ -138,29 +121,22 @@ class PageMark(Serializable):
             warnings.warn(warning_message, CorruptedDynamoDbBase)
         return deserialized_page_mark
 
-    def extend(self, chapters: Iterable[Chapter]) -> 'PageMark':
-        """ offers easy implementation to add chapters to chapter marks """
-        new_chapter_marks = [chapter for chapter in chapters if chapter not in self]
-        self.chapter_marks = sorted(new_chapter_marks + self.chapter_marks,  reverse=True)
-        return self
 
-    def add(self, chapter: Chapter) -> 'PageMark':
-        """ offers easy implementation to add chapters to chapter marks """
-        self.chapter_marks = sorted([chapter] + self.chapter_marks,  reverse=True)
-        return self
+def get_all() -> List[PageMark]:
+    """ Get all page coming from db. """
+    attributes = list(inspect.signature(PageMark.__init__).parameters.keys())
+    attributes.remove('self')
+    response = DYNAMO_TABLE.scan(ProjectionExpression=', '.join(attributes))
+    return [PageMark.deserialize(page_mark_elem) for page_mark_elem in response['Items']]
 
-    def update(self,
-               serie_name: str=None,
-               img_link: str=None,
-               latest_update: datetime=None,
-               chapter_marks: List[Chapter]=None) -> 'PageMark':
-        """ update the values of the object and crushes existing values in place """
-        if serie_name is not None:
-            self.serie_name = serie_name
-        if img_link is not None:
-            self.img_link = img_link
-        if latest_update is not None:
-            self.latest_update = latest_update
-        if chapter_marks is not None:
-            self.chapter_marks = chapter_marks
-        return self
+
+def batch_put(page_marks: Iterable[PageMark]) -> None:
+    """ writes on dynamodb table"""
+    with DYNAMO_TABLE.batch_writer() as batch:
+        for page_mark in page_marks:
+            batch.put_item(Item=page_mark.serialize())
+
+
+def put(page_mark: PageMark) -> None:
+    """ writes on dynamodb table"""
+    DYNAMO_TABLE.put_item(Item=page_mark.serialize())
