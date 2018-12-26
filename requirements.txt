@@ -2,7 +2,7 @@ requests==2.20.0
 beautifulsoup4==4.6.3
 boto3==1.9.37
 google-api-python-client==1.7.4
+lxml==4.2.5
 pytz==2018.7
 Jinja2==2.10
 pytz==2018.7
-lxml==4.2.5
