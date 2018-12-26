@@ -42,66 +42,33 @@ class FormattedScrappedReleases(ScrappedReleases):
 
 
 class _SearchEngine(object):
-    request_number = 0
+    google_link_number = 0
 
     @classmethod
     def add_likely_link(
             cls,
             serie_name: str,
             release: Union[ScrappedChapterRelease, FormattedScrappedChapterRelease]) -> FormattedScrappedChapterRelease:
-        exception_traceback = None
-        if isinstance(release, ScrappedChapterRelease):
-            result = FormattedScrappedChapterRelease(release)
-        else:
-            result = copy.deepcopy(release)
-        query = f'"{release.chapter}" {serie_name} {release.group}'
+
+        _SearchEngine.google_link_number += 1
+
         if release.volume:
-            query += f' v.{release.volume}'
-        url = urlunparse(('https',
-                          'api.qwant.com',
-                          '/api/search/web',
-                          None,
-                          urlencode(dict(
-                              count=1,
-                              offset=0,
-                              q=f'"{release.chapter}" {serie_name} {release.group}',
-                              t="web",
-                              extensionDisabled=True,
-                              safesearch=0,
-                              locale="en_US",
-                              uiv=4)),
-                          None))
-        link = None
-        for attempt in range(5):
-            response_json = None
-            try:
-                response_json = requests.get(url, headers={'User-Agent': 'MangaScraping'}).json()
-                link = response_json['data']['result']['items'][0]['url']
-                cls.request_number += 1
-                exception_traceback = None
-            except Exception as e:
-                exception_traceback = traceback.format_exc() + '\n' + repr(e) + f'\nRequest was : GET <{url}>.'
-                if response_json is None:
-                    exception_traceback += " No response from api."
-                elif not isinstance(e, (IndexError, KeyError)):
-                    exception_traceback += f" -> Response was {json.dumps(response_json, indent=2, sort_keys=True)}"
-                    exception_traceback += '\nCould access '
-                    access_path = []
-                    try:
-                        for key in ('data', 'result', 'items', 0, 'url'):
-                            response_json = response_json.__getitem__(key)
-                            access_path.append(key)
-                    except (KeyError, IndexError):
-                        exception_traceback += (f'\nCould access {".".join(access_path)} failed '
-                                                f'to get {key} in {response_json}')
-            if exception_traceback is None:
-                break
-        if exception_traceback is not None:
-            error_message = f'failed to add likely link after {attempt} attempt {exception_traceback}'
-            warnings.warn(f'{error_message}', FormattingWarning)
-            logger.error(error_message, exc_info=True)
-            return result
-        release.link = link
+            query = f' v.{release.volume}'
+        else:
+            query = ""
+        query += f'"{release.chapter}" {serie_name} {release.group} -backaupdate -site:mangaupdates.com'
+        google_url = urlunparse(('https',
+                                 'www.google.com',
+                                 '/search',
+                                 None,
+                                 urlencode(dict(
+                                     q=query,
+                                     as_qdr='w',  # result in the last 7 days
+                                     safe='images',
+                                     btnI="Search",
+                                     lr="lang_en",)),
+                                 None))
+        release.link = google_url
         return release
 
 
@@ -123,7 +90,7 @@ def format_new_releases(scrapped_releases: ScrappedReleases,
         def is_top(_):
             return True
     formatted_scrapped_new_chapter_release = []
-    number_of_request_before = _SearchEngine.request_number
+    number_of_request_before = _SearchEngine.google_link_number
     for release in new_releases:
         formatted_release = _SearchEngine.add_likely_link(serie_page_mark.serie_name, release)
         formatted_release.top = is_top(release)
