@@ -1,11 +1,12 @@
 import copy
+import json
 import traceback
 from typing import Union, Iterable
+from urllib.parse import urlunparse, urlencode
 import warnings
 
-from apiclient import discovery
+import requests
 
-from config import CSE_MANGA_PERSO_ID, CSE_MANGA_PERSO_KEY
 from logs import logger
 from page_marks_db import PageMark
 from skraper import ScrappedChapterRelease, ScrappedReleases
@@ -40,9 +41,6 @@ class FormattedScrappedReleases(ScrappedReleases):
         self.serie_img_link = serie_img_link
 
 
-google_customsearch_service = discovery.build("customsearch", "v1", developerKey=CSE_MANGA_PERSO_KEY)
-
-
 class _SearchEngine(object):
     request_number = 0
 
@@ -51,28 +49,51 @@ class _SearchEngine(object):
             cls,
             serie_name: str,
             release: Union[ScrappedChapterRelease, FormattedScrappedChapterRelease]) -> FormattedScrappedChapterRelease:
-        cse = google_customsearch_service.cse()
         exception_traceback = None
-        search_response = {}
         if isinstance(release, ScrappedChapterRelease):
             result = FormattedScrappedChapterRelease(release)
         else:
             result = copy.deepcopy(release)
-
+        query = f'"{release.chapter}" {serie_name} {release.group}'
+        if release.volume:
+            query += f' v.{release.volume}'
+        url = urlunparse(('https',
+                          'api.qwant.com',
+                          '/api/search/web',
+                          None,
+                          urlencode(dict(
+                              count=1,
+                              offset=0,
+                              q=f'"{release.chapter}" {serie_name} {release.group}',
+                              t="web",
+                              extensionDisabled=True,
+                              safesearch=0,
+                              locale="en_US",
+                              uiv=4)),
+                          None))
+        link = None
         for attempt in range(5):
+            response_json = None
             try:
-                search_response = cse\
-                    .list(q=f'manga {serie_name} {release.group}',
-                          cx=CSE_MANGA_PERSO_ID,
-                          exactTerms=str(release.chapter),
-                          safe='off',
-                          siteSearchFilter='e', # exclusion of following site
-                          siteSearch='www.mangaupdates.com')\
-                    .execute()
+                response_json = requests.get(url, headers={'User-Agent': 'MangaScraping'}).json()
+                link = response_json['data']['result']['items'][0]['url']
                 cls.request_number += 1
                 exception_traceback = None
             except Exception as e:
-                exception_traceback = traceback.format_exc() + '\n' + repr(e)
+                exception_traceback = traceback.format_exc() + '\n' + repr(e) + f'\nRequest was : GET <{url}>.'
+                if response_json is None:
+                    exception_traceback += " No response from api."
+                elif not isinstance(e, (IndexError, KeyError)):
+                    exception_traceback += f" -> Response was {json.dumps(response_json, indent=2, sort_keys=True)}"
+                    exception_traceback += '\nCould access '
+                    access_path = []
+                    try:
+                        for key in ('data', 'result', 'items', 0, 'url'):
+                            response_json = response_json.__getitem__(key)
+                            access_path.append(key)
+                    except (KeyError, IndexError):
+                        exception_traceback += (f'\nCould access {".".join(access_path)} failed '
+                                                f'to get {key} in {response_json}')
             if exception_traceback is None:
                 break
         if exception_traceback is not None:
@@ -80,13 +101,8 @@ class _SearchEngine(object):
             warnings.warn(f'{error_message}', FormattingWarning)
             logger.error(error_message, exc_info=True)
             return result
-        if not search_response or not search_response.get('items', None):
-            return FormattedScrappedChapterRelease(release)
-        try:
-            result.link = search_response['items'][0]['link']
-        except (IndexError, KeyError):
-            result.link = None
-        return result
+        release.link = link
+        return release
 
 
 def format_new_releases(scrapped_releases: ScrappedReleases,

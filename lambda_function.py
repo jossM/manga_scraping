@@ -60,4 +60,4 @@ def handler_scheduled_scraping(event, context):
             logger.error(f'For some strange reason serie {releases.serie_id} is present but absent from releases.')
             continue
         page_marks_map[releases.serie_id].extend(releases.releases)
-    page_marks_db.batch_put(page_marks)
+    # page_marks_db.batch_put(page_marks)
