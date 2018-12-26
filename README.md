@@ -12,15 +12,16 @@ As Google CSE only permits 100 requests per day. There is only so much manga tha
 
 ##Deployement
 On ubuntu vm for deployment.
-- `sudo apt-get install git`
-- `sudo apt-get install python3.6`
-- `sudo apt-get install python-setuptools python-dev build-essential python3-pip virtualenv zip awscli`
-- `git clone ...`
+- `ssh -i <certificate> ubuntu@<dns-instance-address> `
+- `sudo apt-get update`
+- `sudo apt-get install git python3.6 zip`
+- `sudo apt-get install python-setuptools python-dev build-essential python3-pip virtualenv awscli`
+- `git clone https://github.com/jossM/manga_scraping.git`
 - `cd manga_scraping`
 - `virtualenv -p python3.6 venv`
 - `source venv/bin/activate`
-- `pip3 install -r requirements.txt -t . --system`
+- `pip3 install -t . -r requirements.txt --upgrade`
 - `zip -r ~/manga_scraping.zip *`
-- `aws s3 cp manga_scraping.zip s3://<bucket>/code.zip`
+- `aws s3 cp ~/manga_scraping.zip s3://<bucket>/code.zip`
 
 Then deploy lambda using the file on s3 and set appropriate variable environment.
