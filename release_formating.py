@@ -41,35 +41,29 @@ class FormattedScrappedReleases(ScrappedReleases):
         self.serie_img_link = serie_img_link
 
 
-class _SearchEngine(object):
-    google_link_number = 0
+def add_likely_link(
+        serie_name: str,
+        release: Union[ScrappedChapterRelease, FormattedScrappedChapterRelease])\
+        -> FormattedScrappedChapterRelease:
 
-    @classmethod
-    def add_likely_link(
-            cls,
-            serie_name: str,
-            release: Union[ScrappedChapterRelease, FormattedScrappedChapterRelease]) -> FormattedScrappedChapterRelease:
-
-        _SearchEngine.google_link_number += 1
-
-        if release.volume:
-            query = f' v.{release.volume}'
-        else:
-            query = ""
-        query += f'"{release.chapter}" {serie_name} {release.group} -backaupdate -site:mangaupdates.com'
-        google_url = urlunparse(('https',
-                                 'www.google.com',
-                                 '/search',
-                                 None,
-                                 urlencode(dict(
-                                     q=query,
-                                     as_qdr='w',  # result in the last 7 days
-                                     safe='images',
-                                     btnI="Search",
-                                     lr="lang_en",)),
-                                 None))
-        release.link = google_url
-        return release
+    if release.volume:
+        query = f' v.{release.volume}'
+    else:
+        query = ""
+    query += f'"{release.chapter}" {serie_name} {release.group} -site:mangaupdates.com'
+    google_url = urlunparse(('https',
+                             'www.google.com',
+                             '/search',
+                             None,
+                             urlencode(dict(
+                                 q=query,
+                                 as_qdr='w',  # result in the last 7 days
+                                 safe='images',  # remove safe search
+                                 btnI="Search",  # I'm feeling lucky options
+                                 lr="lang_en",)),
+                             None))
+    release.link = google_url
+    return release
 
 
 def format_new_releases(scrapped_releases: ScrappedReleases,
@@ -95,7 +89,7 @@ def format_new_releases(scrapped_releases: ScrappedReleases,
         formatted_release = _SearchEngine.add_likely_link(serie_page_mark.serie_name, release)
         formatted_release.top = is_top(release)
         formatted_scrapped_new_chapter_release.append(formatted_release)
-    logging_message = f'Requested api {_SearchEngine.request_number - number_of_request_before} time(s)'\
+    logging_message = f'Requested api {_SearchEngine.google_link_number - number_of_request_before} time(s)'\
                       f' for serie id {serie_page_mark.serie_id}'
     if serie_page_mark.serie_name:
         logging_message += f' (name {serie_page_mark.serie_name})'

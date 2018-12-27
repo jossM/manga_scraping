@@ -11,8 +11,10 @@ import release_formating
 
 def scrap_and_format(page_mark: page_marks_db.PageMark) -> release_formating.FormattedScrappedReleases:
     """  mapped functions that scraps bkupdate and formats eventual new releases """
+    logger.debug(f'scraping {page_mark}')
     scrapped_releases = skraper.scrap_bakaupdate(page_mark.serie_id)
     formatted_scrapped_releases = release_formating.format_new_releases(scrapped_releases, page_mark)
+    logger.debug(f'finished scraping {page_mark}')
     return formatted_scrapped_releases
 
 
