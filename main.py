@@ -1,6 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from typing import List
-import warnings
 
 import click
 
@@ -36,14 +35,14 @@ def handle_scheduled_scraping(event, context):
             {pm.serie_id for pm in page_marks} - {release.serie_id for release in updated_serie_releases}
         if not missed_serie_page_marks:
             error_message = f'Got a time out on serie scraping but no serie is missing. Timeout exception : {e}'
-            warnings.warn(error_message)
             logger.warning(error_message, exc_info=True)
         else:
             error_message = ('Scraping timed out before the handling of the following series  : '
                              f'{missed_serie_page_marks}. Exception : {e}')
-            warnings.warn(error_message)
             logger.error(error_message, exc_info=True)
     logger.info(f'End of scrapping for all series.')
+
+    updated_serie_releases = [serie for serie in updated_serie_releases if serie.releases]
 
     # send email
     html_mail = emailing.helper.build_html_body(updated_serie_releases, len(page_marks))

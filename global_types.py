@@ -1,12 +1,16 @@
-from typing import Generic, TypeVar, Dict, Any
 from abc import abstractmethod
 import re
-from typing import Union
-import warnings
+from typing import Union, Generic, TypeVar, Dict, Any
 
 from logs import logger
 
 _SerializableClass = TypeVar('_SerializableClass')
+LETTER_GROUP = 'letter'
+NUMBER_GROUP = 'number'
+
+
+def make_regex(keyword: str):
+    return re.compile(f'^{keyword} ?(?P<{NUMBER_GROUP}>[0-9]*)$')
 
 
 class Serializable(Generic[_SerializableClass]):
@@ -76,24 +80,48 @@ class Chapter(Serializable):
         fromated_value = re.sub(r'\.0+', '', fromated_value)
         return f'volume: {self.volume}, \tchapter: "{self.chapter}" (value: {fromated_value})'
 
+    regex_values_mapping = [
+        (-2000000, make_regex('oneshot')),
+        (-1500000, make_regex('drama cd')),
+        (-1000000, make_regex('extra')),
+        (-1000000, make_regex('omakes')),
+        (-500000, make_regex('special')),
+        (-100000, make_regex('prologue')),
+        (9000000, make_regex('epilogue')),
+    ]
+
+    sub_version_letter = re.compile(f'^(?P<{NUMBER_GROUP}>[0-9]+)(?P<{LETTER_GROUP}>[a-z])$')
+    version_regex = re.compile(f'^(?P<{NUMBER_GROUP}>[0-9]+)v[0-9]+$')
+
     def get_chapter_val(self) -> float:
         """ implements parsing logic for manga chapters (prologue, oneshot, 24.1, 24 etc... """
-        if self.chapter is None:
-            return float(-9000000)
-        attached_string_chapter = re.sub(r'[\W]--[ ]]+', '', self.chapter).lower()
-        if attached_string_chapter == 'oneshot':
-            return float(-2000000)
-        if attached_string_chapter == 'prologue':
-            return float(-1000000)
-        if attached_string_chapter == 'epilogue':
-            return float(9000000)
         try:
             return float(self.chapter)
         except (ValueError, TypeError):
-            error_message = f'Unsupported chapter type for comparison {self.chapter}'
-            warnings.warn(error_message, UnknownChapterFormat)
-            logger.warning(error_message, exc_info=True)
-        return 0
+            pass
+        if self.chapter is None:
+            return float(-9000000)
+        attached_string_chapter = re.sub(r'[\W]--[ ]]+', '', self.chapter).lower().strip()
+        for value, regexp in self.regex_values_mapping:
+            matched = regexp.match(attached_string_chapter)
+            if not matched:
+                continue
+            number_string = matched.group(NUMBER_GROUP)
+            if not number_string:
+                return float(value)
+            sub_info = int(number_string)
+            return float(value + sub_info)
+        sub_version_matched = self.sub_version_letter.match(attached_string_chapter)
+        if sub_version_matched:
+            sub_version = ord(sub_version_matched.group(LETTER_GROUP)) - ord('a') + 1
+            chapter_num = int(sub_version_matched.group(NUMBER_GROUP))
+            return chapter_num + sub_version/10
+        matched_version = self.version_regex.match(attached_string_chapter)
+        if matched_version:
+            return float(matched_version.group(NUMBER_GROUP))
+        logger.warning(f'Unsupported chapter type for comparison "{self.chapter}" '
+                       f'(volume {self.volume} - "{attached_string_chapter}")')
+        return -1
 
     def is_valid(self) -> bool:
         """ whether the current chapter can be given an acceptable value or has a default one"""
@@ -114,4 +142,6 @@ class Chapter(Serializable):
     @classmethod
     def deserialize(cls, dict_data: Dict[str, Union[int, str]]) -> 'Chapter':
         """ inverse of serialize method transforms a dict into a chapter """
+        if 'volume' in dict_data:
+            dict_data['volume'] = int(dict_data['volume'])
         return cls(**dict_data)

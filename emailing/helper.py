@@ -23,9 +23,8 @@ def _make_todays_date() -> str:
     return datetime.now().strftime("%a %d-%b")
 
 
-def build_html_body(
-        formatted_scrapped_releases: List[FormattedScrappedReleases],
-        serie_number: int) -> str:
+def build_html_body(formatted_scrapped_releases: List[FormattedScrappedReleases],
+                    serie_number: int) -> str:
     """ creates an email body to be sent """
     j2_env = Environment(loader=FileSystemLoader(THIS_DIR),
                          trim_blocks=True,
