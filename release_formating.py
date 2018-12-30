@@ -78,16 +78,10 @@ def format_new_releases(scrapped_releases: ScrappedReleases,
         def is_top(_):
             return True
     formatted_scrapped_new_chapter_release = []
-    number_of_request_before = _SearchEngine.google_link_number
     for release in new_releases:
-        formatted_release = _SearchEngine.add_likely_link(serie_page_mark.serie_name, release)
+        formatted_release = add_likely_link(serie_page_mark.serie_name, release)
         formatted_release.top = is_top(release)
         formatted_scrapped_new_chapter_release.append(formatted_release)
-    logging_message = f'Requested api {_SearchEngine.google_link_number - number_of_request_before} time(s)'\
-                      f' for serie id {serie_page_mark.serie_id}'
-    if serie_page_mark.serie_name:
-        logging_message += f' (name {serie_page_mark.serie_name})'
-    logger.info(logging_message)
     return FormattedScrappedReleases(
         serie_id=serie_page_mark.serie_id,
         serie_title=serie_page_mark.serie_name,
