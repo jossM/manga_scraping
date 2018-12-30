@@ -1,7 +1,6 @@
 from typing import Union, Iterable
 from urllib.parse import urlunparse, urlencode
 
-from logs import logger
 from page_marks_db import PageMark
 from skraper import ScrappedChapterRelease, ScrappedReleases
 
@@ -44,7 +43,7 @@ def add_likely_link(
         query = f' v.{release.volume}'
     else:
         query = ""
-    query += f'"{release.chapter}" {serie_name} {release.group} -site:mangaupdates.com'
+    query += f'"{release.chapter}" manga {serie_name} {release.group} -site:mangaupdates.com'
     google_url = urlunparse(('https',
                              'www.google.com',
                              '/search',

@@ -2,12 +2,13 @@ from datetime import datetime
 import inspect
 import pytz
 from typing import List, Dict, Union, Iterable
-import warnings
 
 import boto3
+from botocore.exceptions import ClientError
 
 from config import AWS_REGION
 from global_types import Chapter, Serializable
+from logs import logger
 
 
 dynamodb = boto3.resource('dynamodb', region_name=AWS_REGION)
@@ -118,7 +119,7 @@ class PageMark(Serializable):
         deserialized_page_mark.chapter_marks = sorted(chapter_marks, reverse=True)
 
         if len(warning_message) > initial_warning_message_len:
-            warnings.warn(warning_message, CorruptedDynamoDbBase)
+            logger.warning(warning_message)
         return deserialized_page_mark
 
 
@@ -128,6 +129,16 @@ def get_all() -> List[PageMark]:
     attributes.remove('self')
     response = DYNAMO_TABLE.scan(ProjectionExpression=', '.join(attributes))
     return [PageMark.deserialize(page_mark_elem) for page_mark_elem in response['Items']]
+
+
+def get(serie_id: str) -> Union[None, PageMark]:
+    """ Retrieves a page mark object from db or returns None if no matching key is found. """
+    try:
+        response = DYNAMO_TABLE.get_item(Key=dict(serie_id=serie_id))
+    except ClientError:
+        logger.error('failed to get ', exc_info=True)
+        return None
+    return PageMark.deserialize(response['Item'])
 
 
 def batch_put(page_marks: Iterable[PageMark]) -> None:

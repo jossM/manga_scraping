@@ -2,6 +2,8 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from typing import List
 import warnings
 
+import click
+
 import emailing
 from logs import logger
 import page_marks_db
@@ -9,10 +11,10 @@ import skraper
 import release_formating
 
 
-def scrap_and_format(page_mark: page_marks_db.PageMark) -> release_formating.FormattedScrappedReleases:
+def _scrap_and_format(page_mark: page_marks_db.PageMark) -> release_formating.FormattedScrappedReleases:
     """  mapped functions that scraps bkupdate and formats eventual new releases """
     logger.debug(f'scraping {page_mark}')
-    scrapped_releases = skraper.scrap_bakaupdate(page_mark.serie_id)
+    scrapped_releases = skraper.scrap_bakaupdate_releases(page_mark.serie_id)
     formatted_scrapped_releases = release_formating.format_new_releases(scrapped_releases, page_mark)
     logger.debug(f'finished scraping {page_mark}')
     return formatted_scrapped_releases
@@ -29,7 +31,7 @@ def handle_scheduled_scraping(event, context):
         pool = ThreadPoolExecutor(max_workers=3)
         try:
             updated_serie_releases: List[release_formating.FormattedScrappedReleases] = \
-                list(pool.map(scrap_and_format, page_marks, timeout=600))
+                list(pool.map(_scrap_and_format, page_marks, timeout=600))
         except TimeoutError as e:  # catches scrap_stream timeout that are raised when calling next in for iterator
             missed_serie_page_marks = \
                 {pm.serie_id for pm in page_marks} - {release.serie_id for release in updated_serie_releases}
@@ -65,5 +67,25 @@ def handle_scheduled_scraping(event, context):
     page_marks_db.batch_put(page_marks)
 
 
+@click.command()
+@click.argument('serie_id')
+@click.option('--name', default=None, help='The name of the serie you want displayed.')
+@click.option('--img', default=None, help='The image of the serie you want displayed.')
+@click.option('--keep/--crush', default=True, help='Whether to keep the chapters already present in db.')
+def add_serie_in_db(serie_id, serie_name=None, serie_img=None, keep_chapters=True):
+    """ called only in local for admin tasks """
+    if keep_chapters:
+        new_page_mark = page_marks_db.get(serie_id)
+        if new_page_mark is not None:
+            if serie_name is not None:
+                new_page_mark.serie_name = serie_name
+            if serie_img is not None:
+                new_page_mark.img_link = serie_img
+    if new_page_mark is not None:
+        new_page_mark = skraper.scrap_bakaupdate_serie(serie_id, serie_name, serie_img)
+    page_marks_db.put(new_page_mark)
+
+
 if __name__ == "__main__":
-    handle_scheduled_scraping(None, None)
+    ## called only in local for admin tasks
+    add_serie_in_db()
