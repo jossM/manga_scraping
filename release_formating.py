@@ -40,10 +40,10 @@ def add_likely_link(
         -> FormattedScrappedChapterRelease:
 
     if release.volume:
-        query = f' v.{release.volume}'
+        query = f' v.{release.volume} '
     else:
         query = ""
-    query += f'"{release.chapter}" manga {serie_name} {release.group} -site:mangaupdates.com'
+    query += f'"{release.chapter}" manga {serie_name} {release.group} -site:mangaupdates.com -site:play.google.com'
     google_url = urlunparse(('https',
                              'www.google.com',
                              '/search',
@@ -51,7 +51,7 @@ def add_likely_link(
                              urlencode(dict(
                                  q=query,
                                  safe='images',  # remove safe search
-                                 btnI="I'm Feeling Lucky",  # I'm feeling lucky options
+                                 btnG="Search",
                                  lr="lang_en",)),
                              None))
     release.link = google_url
