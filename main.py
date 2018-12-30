@@ -18,7 +18,7 @@ def scrap_and_format(page_mark: page_marks_db.PageMark) -> release_formating.For
     return formatted_scrapped_releases
 
 
-def handler_scheduled_scraping(event, context):
+def handle_scheduled_scraping(event, context):
     """ main function. """
     updated_serie_releases: List[release_formating.FormattedScrappedReleases] = []
     # scraping
@@ -63,3 +63,7 @@ def handler_scheduled_scraping(event, context):
             continue
         page_marks_map[releases.serie_id].extend(releases.releases)
     # page_marks_db.batch_put(page_marks)
+
+
+if __name__ == "__main__":
+    handle_scheduled_scraping(None, None)

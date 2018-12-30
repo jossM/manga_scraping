@@ -12,8 +12,7 @@ On ubuntu vm for deployment.
 - `ssh -i <certificate> ubuntu@<dns-instance-address> `
 - `sudo apt-get update`
 - `sudo apt-get install git python3.6 zip`
-- `sudo apt-get install python-setuptools python-dev build-essential 
-python3-pip virtualenv awscli`
+- `sudo apt-get install python-setuptools python-dev build-essential python3-pip virtualenv awscli`
 - `git clone https://github.com/jossM/manga_scraping.git`
 - `cd manga_scraping`
 - `virtualenv -p python3.6 venv`
