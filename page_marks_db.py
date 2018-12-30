@@ -134,11 +134,13 @@ def get_all() -> List[PageMark]:
 def get(serie_id: str) -> Union[None, PageMark]:
     """ Retrieves a page mark object from db or returns None if no matching key is found. """
     try:
-        response = DYNAMO_TABLE.get_item(Key=dict(serie_id=serie_id))
+        item = DYNAMO_TABLE.get_item(Key=dict(serie_id=serie_id))['Item']
     except ClientError:
         logger.error('failed to get ', exc_info=True)
         return None
-    return PageMark.deserialize(response['Item'])
+    except KeyError:
+        return None
+    return PageMark.deserialize(item)
 
 
 def batch_put(page_marks: Iterable[PageMark]) -> None:

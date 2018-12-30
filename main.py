@@ -71,18 +71,19 @@ def handle_scheduled_scraping(event, context):
 @click.argument('serie_id')
 @click.option('--name', default=None, help='The name of the serie you want displayed.')
 @click.option('--img', default=None, help='The image of the serie you want displayed.')
-@click.option('--keep/--crush', default=True, help='Whether to keep the chapters already present in db.')
-def add_serie_in_db(serie_id, serie_name=None, serie_img=None, keep_chapters=True):
+@click.option('--keep_chapters/--delete_chapters', default=True, help='Whether to keep the chapters already present in db.')
+def add_serie_in_db(serie_id, name=None, img=None, keep_chapters=True):
     """ called only in local for admin tasks """
     if keep_chapters:
         new_page_mark = page_marks_db.get(serie_id)
         if new_page_mark is not None:
-            if serie_name is not None:
-                new_page_mark.serie_name = serie_name
-            if serie_img is not None:
-                new_page_mark.img_link = serie_img
-    if new_page_mark is not None:
-        new_page_mark = skraper.scrap_bakaupdate_serie(serie_id, serie_name, serie_img)
+            if name is not None:
+                new_page_mark.serie_name = name
+            if img is not None:
+                new_page_mark.img_link = img
+    if new_page_mark is None:
+        new_page_mark = skraper.scrap_bakaupdate_serie(serie_id, name, img)
+    click.echo(f"stored {new_page_mark}")
     page_marks_db.put(new_page_mark)
 
 
