@@ -39,9 +39,7 @@ def build_html_body(
         log_link=log_link)
 
 
-def build_txt_body(
-        formatted_scrapped_releases: List[FormattedScrappedReleases],
-        triggered_warnings: List[Warning]) -> str:
+def build_txt_body(formatted_scrapped_releases: List[FormattedScrappedReleases]) -> str:
     """ builds a string as default display in case the html body was bad """
     string_body = "Hello,\n"
     if not formatted_scrapped_releases:
@@ -70,8 +68,6 @@ def build_txt_body(
             serie_string += line_start + line_start.join(releases_strings)
             series_strings.append(serie_string)
         string_body += '\r\n'.join(series_strings)
-    if triggered_warnings:
-        string_body += '\n\t' + '\n\t'.join(str(warning) for warning in triggered_warnings)
     return string_body
 
 
