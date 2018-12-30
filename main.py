@@ -72,6 +72,7 @@ def handle_scheduled_scraping(event, context):
 @click.option('--keep_chapters/--delete_chapters', default=True, help='Whether to keep the chapters already present in db.')
 def add_serie_in_db(serie_id, name=None, img=None, keep_chapters=True):
     """ called only in local for admin tasks """
+    new_page_mark = None
     if keep_chapters:
         new_page_mark = page_marks_db.get(serie_id)
         click.echo(f"retrieved {new_page_mark}")
