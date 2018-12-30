@@ -76,6 +76,7 @@ def add_serie_in_db(serie_id, name=None, img=None, keep_chapters=True):
     """ called only in local for admin tasks """
     if keep_chapters:
         new_page_mark = page_marks_db.get(serie_id)
+        click.echo(f"retrieved {new_page_mark}")
         if new_page_mark is not None:
             if name is not None:
                 new_page_mark.serie_name = name
