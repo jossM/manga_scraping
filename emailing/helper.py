@@ -75,9 +75,8 @@ def build_txt_body(
     return string_body
 
 
-def send_newsletter(html_body: str, text_body: str, recipients: List[str]=None):
-    if recipients is None:
-        recipients = RECEIVING_EMAILS
+def send_newsletter(html_body: str, text_body: str):
+    recipients = RECEIVING_EMAILS
     try:
         response = client.send_email(
             Destination={'ToAddresses': recipients},
