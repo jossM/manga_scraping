@@ -1,11 +1,5 @@
-import copy
-import json
-import traceback
 from typing import Union, Iterable
 from urllib.parse import urlunparse, urlencode
-import warnings
-
-import requests
 
 from logs import logger
 from page_marks_db import PageMark
