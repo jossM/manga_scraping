@@ -25,8 +25,8 @@ def handle_scheduled_scraping(event, context):
     # scraping
     page_marks = page_marks_db.get_all()
 
-    # why 3 ... because it's a thread, so GIL apply, and it's more than 1 while not being too high
-    pool = ThreadPoolExecutor(max_workers=3)
+    # why 4 ... because it's a thread, so GIL apply, and it's more than 1 while not being too high
+    pool = ThreadPoolExecutor(max_workers=4)
     try:
         updated_serie_releases: List[release_formating.FormattedScrappedReleases] = \
             list(pool.map(_scrap_and_format, page_marks, timeout=600))

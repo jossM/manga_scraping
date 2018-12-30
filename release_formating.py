@@ -50,9 +50,8 @@ def add_likely_link(
                              None,
                              urlencode(dict(
                                  q=query,
-                                 as_qdr='w',  # result in the last 7 days
                                  safe='images',  # remove safe search
-                                 btnI="Search",  # I'm feeling lucky options
+                                 btnI="I'm Feeling Lucky",  # I'm feeling lucky options
                                  lr="lang_en",)),
                              None))
     release.link = google_url
