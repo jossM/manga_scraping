@@ -25,17 +25,18 @@ def _make_todays_date() -> str:
 
 def build_html_body(
         formatted_scrapped_releases: List[FormattedScrappedReleases],
-        triggered_warnings: List[Warning], # todo: use this variable
         serie_number: int) -> str:
     """ creates an email body to be sent """
     j2_env = Environment(loader=FileSystemLoader(THIS_DIR),
                          trim_blocks=True,
                          lstrip_blocks=True)
+    log_link = f"https://console.aws.amazon.com/cloudwatch/home?region={AWS_REGION}" \
+               f"#logStream:group=/aws/lambda/manga_scrapping;streamFilter=typeLogStreamPrefix"
     return j2_env.get_template('mail_template.html').render(
         date_str=_make_todays_date(),
         serie_number=serie_number,
-        all_series_releases=formatted_scrapped_releases
-    )
+        all_series_releases=formatted_scrapped_releases,
+        log_link=log_link)
 
 
 def build_txt_body(
