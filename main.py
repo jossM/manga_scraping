@@ -22,7 +22,7 @@ def handle_scheduled_scraping(event, context):
     updated_serie = 0
     for page_mark in ordered_page_marks:
 
-        logger.info(f'scraping {page_mark.serie_id}, {page_mark.serie_name}')
+        logger.debug(f'scraping {page_mark.serie_id}, {page_mark.serie_name}')
         try:
             scrapped_releases = skraper.scrap_bakaupdate_releases(page_mark.serie_id)
             formatted_scrapped_releases = release_formating.format_new_releases(scrapped_releases, page_mark)
