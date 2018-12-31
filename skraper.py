@@ -42,7 +42,11 @@ class ScrappedReleases:
 
 
 def _transform_page_to_beautiful_soup(url: str) -> BeautifulSoup:
-    bakaupdate_response = requests.get(url)
+    try:
+        bakaupdate_response = requests.get(url)
+    except Exception as e:
+        logger.error(f'failed to request {url}. Error {e}')
+        raise e
     bakaupdate_response.raise_for_status()
     return BeautifulSoup(bakaupdate_response.content, features="lxml")
 

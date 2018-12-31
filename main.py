@@ -31,7 +31,7 @@ def handle_scheduled_scraping(event, context):
             page_mark.latest_update = datetime.utcnow()
             page_mark.latest_update.replace(tzinfo=pytz.utc)
         except Exception as e:
-            logger.error(f'Failed scraping {page_mark.serie_id}, {page_mark.serie_name}. Error {e}', exc_info=True)
+            logger.error(f'Failed scraping {page_mark.serie_id}, {page_mark.serie_name}. Error {e}')
         else:
             logger.debug(f'finished scrapping {page_mark.serie_id}, {page_mark.serie_name} ')
     logger.info(f'End of scrapping for all series.')
