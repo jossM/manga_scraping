@@ -3,6 +3,7 @@ import inspect
 import pytz
 from typing import List, Dict, Union, Iterable
 
+import dateutil.parser
 import boto3
 from botocore.exceptions import ClientError
 
@@ -102,7 +103,7 @@ class PageMark(Serializable):
             deserialized_page_mark.img_link = dict_data['img_link']
 
         if 'latest_update' in dict_data:
-            deserialized_page_mark.latest_update = dict_data['latest_update']
+            deserialized_page_mark.latest_update = dateutil.parser.parse(dict_data['latest_update'])
 
         raw_chapter_marks = dict_data.get('chapter_marks', [])
         chapter_marks = list()
