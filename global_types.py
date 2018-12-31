@@ -87,8 +87,10 @@ class Chapter(Serializable):
         (9000000, make_regex('epilogue')),
     ]
 
-    sub_version_letter = re.compile(f'^(?P<{NUMBER_GROUP}>[0-9]+)(?P<{LETTER_GROUP}>[a-z])$')
-    version_regex = re.compile(f'^(?P<{NUMBER_GROUP}>[0-9]+)v[0-9]+$')
+    unsupported_chars_regex = re.compile('[^\w .]')
+    version_regex = re.compile(f'v[ .]*[0-9]+$')
+    end_regex = re.compile(f'end$')
+    sub_chapter_letter = re.compile(f'^(?P<{NUMBER_GROUP}>[0-9]+)(?P<{LETTER_GROUP}>[a-z])$')
 
     def get_chapter_val(self) -> float:
         """ implements parsing logic for manga chapters (prologue, oneshot, 24.1, 24 etc... """
@@ -96,9 +98,11 @@ class Chapter(Serializable):
             return float(self.chapter)
         except (ValueError, TypeError):
             pass
-        if self.chapter is None:
+        if not self.chapter:
             return float(-9000000)
-        attached_string_chapter = re.sub(r'[\W]--[ ]]+', '', self.chapter).lower().strip()
+        attached_string_chapter = self.unsupported_chars_regex.sub('', self.chapter).lower().strip()
+        attached_string_chapter = self.end_regex.sub('', attached_string_chapter).strip()
+        attached_string_chapter = self.version_regex.sub('', attached_string_chapter).strip()
         for value, regexp in self.regex_values_mapping:
             matched = regexp.match(attached_string_chapter)
             if not matched:
@@ -108,14 +112,15 @@ class Chapter(Serializable):
                 return float(value)
             sub_info = int(number_string)
             return float(value + sub_info)
-        sub_version_matched = self.sub_version_letter.match(attached_string_chapter)
-        if sub_version_matched:
-            sub_version = ord(sub_version_matched.group(LETTER_GROUP)) - ord('a') + 1
-            chapter_num = int(sub_version_matched.group(NUMBER_GROUP))
+        sub_chapter_matched = self.sub_chapter_letter.match(attached_string_chapter)
+        if sub_chapter_matched:
+            sub_version = ord(sub_chapter_matched.group(LETTER_GROUP)) - ord('a') + 1
+            chapter_num = int(sub_chapter_matched.group(NUMBER_GROUP))
             return chapter_num + sub_version/10
-        matched_version = self.version_regex.match(attached_string_chapter)
-        if matched_version:
-            return float(matched_version.group(NUMBER_GROUP))
+        try:
+            return float(attached_string_chapter)
+        except (ValueError, TypeError):
+            pass
         logger.warning(f'Unsupported chapter type for comparison "{self.chapter}" '
                        f'(volume {self.volume} - "{attached_string_chapter}")')
         return -1
