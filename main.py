@@ -33,7 +33,6 @@ def handle_scheduled_scraping(event, context):
             logger.error(f'Failed scraping {page_mark.serie_id}, {page_mark.serie_name}. Error {e}')
         else:
             logger.debug(f'finished scrapping {page_mark.serie_id}, {page_mark.serie_name} ')
-        break  # temp -> avoid spamming bakaupdate as the issue comes from email not being sent
     logger.info(f'End of scrapping for all series.')
 
     # send email
