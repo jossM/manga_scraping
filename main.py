@@ -1,6 +1,7 @@
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
+from datetime import datetime
 from typing import List
 
+import pytz
 import click
 
 import emailing
@@ -10,58 +11,51 @@ import skraper
 import release_formating
 
 
-def _scrap_and_format(page_mark: page_marks_db.PageMark) -> release_formating.FormattedScrappedReleases:
-    """  mapped functions that scraps bkupdate and formats eventual new releases """
-    logger.debug(f'scraping {page_mark}')
-    scrapped_releases = skraper.scrap_bakaupdate_releases(page_mark.serie_id)
-    formatted_scrapped_releases = release_formating.format_new_releases(scrapped_releases, page_mark)
-    logger.debug(f'finished scraping {page_mark}')
-    return formatted_scrapped_releases
-
-
 def handle_scheduled_scraping(event, context):
-    """ main function. """
-    updated_serie_releases: List[release_formating.FormattedScrappedReleases] = []
+    """ main function on lambda. """
     # scraping
-    page_marks = page_marks_db.get_all()
+    all_page_marks = page_marks_db.get_all()
+    updated_serie_releases: List[release_formating.FormattedScrappedReleases] = []
+    # sort to update first the oldest values and then the most recent.
+    ordered_page_marks = [pm for pm in all_page_marks if pm.latest_update is None] + \
+                         sorted([pm for pm in all_page_marks if pm.latest_update is not None],
+                                reverse=True, key=lambda pm: pm.latest_update)
+    for page_mark in ordered_page_marks:
 
-    # why 4 ... because it's a thread, so GIL apply, and it's more than 1 while not being too high
-    pool = ThreadPoolExecutor(max_workers=4)
-    try:
-        updated_serie_releases: List[release_formating.FormattedScrappedReleases] = \
-            list(pool.map(_scrap_and_format, page_marks, timeout=600))
-    except TimeoutError as e:  # catches scrap_stream timeout that are raised when calling next in for iterator
-        missed_serie_page_marks = \
-            {pm.serie_id for pm in page_marks} - {release.serie_id for release in updated_serie_releases}
-        if not missed_serie_page_marks:
-            error_message = f'Got a time out on serie scraping but no serie is missing. Timeout exception : {e}'
-            logger.warning(error_message, exc_info=True)
+        logger.debug(f'scraping {page_mark.serie_id}, {page_mark.serie_name}')
+        try:
+            scrapped_releases = skraper.scrap_bakaupdate_releases(page_mark.serie_id)
+            formatted_scrapped_releases = release_formating.format_new_releases(scrapped_releases, page_mark)
+            if formatted_scrapped_releases.releases:
+                updated_serie_releases.append(formatted_scrapped_releases)
+            page_mark.latest_update = datetime.utcnow()
+            page_mark.latest_update.replace(tzinfo=pytz.utc)
+        except Exception as e:
+            logger.error(f'Failed scraping {page_mark.serie_id}, {page_mark.serie_name}. Error {e}', exc_info=True)
         else:
-            error_message = ('Scraping timed out before the handling of the following series  : '
-                             f'{missed_serie_page_marks}. Exception : {e}')
-            logger.error(error_message, exc_info=True)
+            logger.debug(f'finished scrapping {page_mark.serie_id}, {page_mark.serie_name} ')
     logger.info(f'End of scrapping for all series.')
 
-    updated_serie_releases = [serie for serie in updated_serie_releases if serie.releases]
-
     # send email
-    html_mail = emailing.helper.build_html_body(updated_serie_releases, len(page_marks))
+    html_mail = emailing.helper.build_html_body(updated_serie_releases, len(all_page_marks))
     txt_mail = emailing.helper.build_txt_body(updated_serie_releases)
     emailing.helper.send_newsletter(text_body=txt_mail, html_body=html_mail)
 
     if not updated_serie_releases:
-        logger.info('nothing to send. Stopping lambda.')
+        logger.info('nothing to store. Stopping lambda.')
         return
-    logger.info(f'Finaly over, registering : \n{updated_serie_releases}')
+    all_releases = '\n'.join(sorted([f'\t{r.serie_id}, {r.serie_title}' for r in updated_serie_releases]))
+    logger.info(f'Finaly over, registering : \n{all_releases}')
 
     # store updates
-    page_marks_map = {pm.serie_id: pm for pm in page_marks}
+    page_marks_map = {pm.serie_id: pm for pm in all_page_marks}
     for releases in updated_serie_releases:
         if releases.serie_id not in page_marks_map:
             logger.error(f'For some strange reason serie {releases.serie_id} is present but absent from releases.')
             continue
+        logger.debug(f'adding {len(releases.releases)} to {releases.serie_id}, {releases.serie_title}')
         page_marks_map[releases.serie_id].extend(releases.releases)
-    page_marks_db.batch_put(page_marks)
+    page_marks_db.batch_put(all_page_marks)
 
 
 @click.command()
