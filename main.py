@@ -22,7 +22,7 @@ def handle_scheduled_scraping(event, context):
     updated_serie = 0
     for page_mark in ordered_page_marks:
 
-        logger.debug(f'scraping {page_mark.serie_id}, {page_mark.serie_name}')
+        logger.info(f'scraping {page_mark.serie_id}, {page_mark.serie_name}')
         try:
             scrapped_releases = skraper.scrap_bakaupdate_releases(page_mark.serie_id)
             formatted_scrapped_releases = release_formating.format_new_releases(scrapped_releases, page_mark)
@@ -34,7 +34,7 @@ def handle_scheduled_scraping(event, context):
         except Exception as e:
             logger.error(f'Failed scraping {page_mark.serie_id}, {page_mark.serie_name}. Error {e}')
         else:
-            logger.debug(f'finished scrapping {page_mark.serie_id}, {page_mark.serie_name} ')
+            logger.info(f'finished scrapping {page_mark.serie_id}, {page_mark.serie_name} ')
             updated_serie += 1
     logger.info(f'End of scrapping for all series.')
 
@@ -55,6 +55,6 @@ def handle_scheduled_scraping(event, context):
         if releases.serie_id not in page_marks_map:
             logger.error(f'For some strange reason serie {releases.serie_id} is present but absent from releases.')
             continue
-        logger.debug(f'adding {len(releases.releases)} to {releases.serie_id}, {releases.serie_title}')
+        logger.info(f'adding {len(releases.releases)} to {releases.serie_id}, {releases.serie_title}')
         page_marks_map[releases.serie_id].extend(releases.releases)
     page_marks_db.batch_put(all_page_marks)
