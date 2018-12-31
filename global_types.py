@@ -38,20 +38,15 @@ class Chapter(Serializable):
         self.chapter = chapter.strip()
 
     def __ge__(self, other: 'Chapter'):
-        if self.__gt__(other):
-            return True
-        return self.volume == other.volume and self.get_chapter_val() == self.get_chapter_val()
+        if self.volume is not None and other.volume is not None and self.volume != other.volume:
+            return self.volume > other.volume
+        return self.get_chapter_val() >= self.get_chapter_val()
         # /!\ Careful you can have chap1 > chap2 -> False and chap1 >= chap2 -> True but chap1 == chap2 false
         # as == is not used here
 
     def __gt__(self, other: 'Chapter'):
-        if self.volume is None and other.volume is not None:
-            return False
-        if other.volume is None and self.volume is not None:
-            return True
-        if self.volume is not None and other.volume is not None:
-            if self.volume > other.volume:
-                return True
+        if self.volume is not None and other.volume is not None and self.volume != other.volume:
+            return self.volume > other.volume
         return self.get_chapter_val() > other.get_chapter_val()
 
     def __lt__(self, other: 'Chapter'):
@@ -84,7 +79,9 @@ class Chapter(Serializable):
         (-2000000, make_regex('oneshot')),
         (-1500000, make_regex('drama cd')),
         (-1000000, make_regex('extra')),
+        (-1000000, make_regex('extras')),
         (-1000000, make_regex('omakes')),
+        (-1000000, make_regex('omake')),
         (-500000, make_regex('special')),
         (-100000, make_regex('prologue')),
         (9000000, make_regex('epilogue')),
