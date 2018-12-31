@@ -2,6 +2,7 @@
     variables :
     - date_str: str, date of the scraping
     - serie_number: Union[int, str] number of line in the databases
+    - scrapped_serie_number:
     - all_series_releases: List[release_formating.FormattedScrappedReleases], actual new releases
 
     Note: not using class due to this article
@@ -320,11 +321,17 @@
         Here are the result of the scrapping on the {{ date_str }}<br>
     </p>
     {% if not all_series_releases %}
-        <p>No new releases found on the {{ serie_number }} series you are following since the last email.<br></p>
+        <p>
+            No new releases found on the {{ serie_number }} series you are following since the last email.<br>
+            ({{ scrapped_serie_number }} {%+ if scrapped_serie_number > 1 %}  were {% else %} was {% endif %} scrapped).
+            <br>
+        </p>
     {% else %}
         <p>
             Out of the {{ serie_number }} that you are following, {{ all_series_releases|length }}
             {%+ if series_releases|length > 1 %}  have {% else %}  has {% endif %} new release since the last email.
+            <br>
+            ({{ scrapped_serie_number }} {%+ if scrapped_serie_number > 1 %}  were {% else %} was {% endif %} scrapped.)
         </p>
         <table cellpadding="1%" cellspacing="1%" border="0">
             {% for serie_specific_releases in all_series_releases %}
@@ -333,7 +340,8 @@
                         <table cellpadding="1%" cellspacing="1%" border="0">
                             <tr>
                                 <td>
-                                    <h3>{{ serie_specific_releases.serie_title }}<sub>{{ serie_specific_releases.serie_id }}</sub></h3>
+                                    <h3>{{ serie_specific_releases.serie_title }}</h3>
+                                    <sub>{{ serie_specific_releases.serie_id }}</sub>
                                 </td>
                             </tr>
                             <tr>

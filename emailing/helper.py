@@ -24,6 +24,7 @@ def _make_todays_date() -> str:
 
 
 def build_html_body(formatted_scrapped_releases: List[FormattedScrappedReleases],
+                    scrapped_serie_number: int,
                     serie_number: int) -> str:
     """ creates an email body to be sent """
     j2_env = Environment(loader=FileSystemLoader(THIS_DIR),
@@ -34,6 +35,7 @@ def build_html_body(formatted_scrapped_releases: List[FormattedScrappedReleases]
     return j2_env.get_template('mail_template.html').render(
         date_str=_make_todays_date(),
         serie_number=serie_number,
+        scrapped_serie_number=scrapped_serie_number,
         all_series_releases=formatted_scrapped_releases,
         log_link=log_link)
 
