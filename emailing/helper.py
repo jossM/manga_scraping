@@ -11,7 +11,7 @@ from config import SENDING_EMAIL, RECEIVING_EMAILS, AWS_REGION, SES_CONFIGURATIO
 from logs import logger
 from release_formating import FormattedScrappedReleases
 
-client = boto3.client('ses', region_name=AWS_REGION)
+ses_client = boto3.client('ses', region_name=AWS_REGION)
 
 CHARSET = "UTF-8"
 SPACES_PER_TAB = 4
@@ -73,7 +73,7 @@ def build_txt_body(formatted_scrapped_releases: List[FormattedScrappedReleases])
 def send_newsletter(html_body: str, text_body: str):
     recipients = RECEIVING_EMAILS
     try:
-        response = client.send_email(
+        response = ses_client.send_email(
             Destination={'ToAddresses': recipients},
             Message={
                 'Body': {'Html': {'Charset': CHARSET, 'Data': html_body},
