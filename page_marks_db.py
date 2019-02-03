@@ -1,7 +1,7 @@
 from datetime import datetime
 import inspect
 import pytz
-from typing import List, Dict, Union, Iterable
+from typing import List, Dict, Union, Iterable, Tuple
 
 import dateutil.parser
 import boto3
@@ -29,15 +29,12 @@ class PageMark(Serializable):
                  serie_name: Union[str, None]=None,
                  img_link: Union[str, None]=None,
                  latest_update: Union[datetime, None]=None,
-                 chapter_marks: Union[List[Chapter], None]= None):
+                 chapter_marks: Union[List[Chapter], Tuple[Chapter]]= tuple()):
         self._serie_id = serie_id
         self.serie_name = serie_name
         self.img_link = img_link
         self.latest_update = latest_update
-        if chapter_marks is None:
-            self.chapter_marks: List[Chapter] = []
-        else:
-            self.chapter_marks: List[Chapter] = sorted(chapter_marks, reverse=True)
+        self.chapter_marks: List[Chapter] = sorted(chapter_marks, reverse=True)
 
     @property
     def serie_id(self) -> str:
@@ -55,15 +52,13 @@ class PageMark(Serializable):
             yield chapter
 
     def __repr__(self) -> str:
-        type_string = str(type(self))
         header_sep = '\n\t'
-        chapter_sep = header_sep + '\t'
-        repr_string = f'{type_string}<' \
-                      f'{header_sep}serie: {self.serie_id}' \
-                      f'{header_sep}name: {self.serie_name}' \
-                      f'{header_sep}image link: {self.img_link}{chapter_sep}'
-        repr_string += chapter_sep.join(f'chapter {chapter}' for chapter in self) + '>'
-        return repr_string
+        return (f'{str(type(self))}<'
+                + header_sep.join([f'serie: {self.serie_id}',
+                                   f'name: {self.serie_name}',
+                                   f'image link: {self.img_link}']
+                                  + [f'\tchapter {chapter}' for chapter in self.chapter_marks]) +
+                '>')
 
     def extend(self, chapters: Iterable[Chapter]) -> 'PageMark':
         """ offers easy implementation to add chapters to chapter marks """
@@ -87,39 +82,42 @@ class PageMark(Serializable):
     def deserialize(cls, dict_data: Dict) -> 'PageMark':
         """ transform a dict into an objet. may trigger warnings if object does not have the correct format """
         deserialized_page_mark = cls(serie_id=dict_data['serie_id'])
-        warning_message = f'Corrupted PageMark document for serie id {deserialized_page_mark.serie_id}.'
-        initial_warning_message_len = len(warning_message)
+        warning_message_elem = []
 
-        serie_name = dict_data.get('serie_name', None)
         if 'serie_name' not in dict_data:
-            warning_message += '\n"serie_name" attribute is missing.'
+            warning_message_elem.append('"serie_name" attribute is missing.')
         else:
             deserialized_page_mark.serie_name = dict_data['serie_name']
-            warning_message += f' name "{serie_name}"'
-            initial_warning_message_len = len(warning_message)
         if 'img_link' not in dict_data:
-            warning_message += '\n"img_link" attribute is missing.'
+            warning_message_elem.append('"img_link" attribute is missing.')
         else:
             deserialized_page_mark.img_link = dict_data['img_link']
 
         if 'latest_update' in dict_data:
-            deserialized_page_mark.latest_update = dateutil.parser.parse(dict_data['latest_update'])
+            try:
+                deserialized_page_mark.latest_update = dateutil.parser.parse(dict_data['latest_update'])
+            except KeyError:
+                pass
+            except ValueError as e:
+                warning_message_elem.append(f'"latest_update" attribute has unrecognized format. Parsing error {e}. '
+                                            f'Value was : {dict_data.get("latest_update")}')
 
-        raw_chapter_marks = dict_data.get('chapter_marks', [])
         chapter_marks = list()
-        for index_position, mark in enumerate(raw_chapter_marks):
+        for index_position, mark in enumerate(dict_data.get('chapter_marks', [])):
             try:
                 chapter = Chapter.deserialize(mark)
                 if not chapter.is_valid():
-                    warning_message += f' chapter_mark" attribute is invalid at position. {index_position},' \
-                                       f' with key values "{str(mark)}"'
+                    warning_message_elem.append(f'chapter_mark" attribute is invalid at position. {index_position},'
+                                                f' with key values "{str(mark)}"')
                 chapter_marks.append(chapter)
             except TypeError:
-                warning_message += f' chapter_mark" attribute is invalid at position. {index_position},' \
-                                   f' with key values "{str(mark)}"'
+                warning_message_elem.append(f' chapter_mark" attribute is invalid at position. {index_position},'
+                                            f' with key values "{str(mark)}"')
         deserialized_page_mark.chapter_marks = sorted(chapter_marks, reverse=True)
 
-        if len(warning_message) > initial_warning_message_len:
+        if warning_message_elem:
+            warning_message = f'Corrupted PageMark document for serie id {deserialized_page_mark.serie_id}, ' \
+                              f'and serie name {dict_data.get("serie_name", "")} ' + '\n'.join(warning_message_elem)
             logger.warning(warning_message)
         return deserialized_page_mark
 
