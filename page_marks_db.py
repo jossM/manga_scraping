@@ -80,7 +80,10 @@ class PageMark(Serializable):
 
     @classmethod
     def deserialize(cls, dict_data: Dict) -> 'PageMark':
-        """ transform a dict into an objet. may trigger warnings if object does not have the correct format """
+        """
+        transforms a dict into an objet.
+        may trigger warnings if object does not have the correct format
+        """
         deserialized_page_mark = cls(serie_id=dict_data['serie_id'])
         warning_message_elem = []
 
