@@ -17,8 +17,8 @@ def handle_scheduled_scraping(event, context):
     updated_serie_releases: List[release_formating.FormattedScrappedReleases] = []
     # sort to update first the oldest values and then the most recent.
     ordered_page_marks = [pm for pm in all_page_marks if pm.latest_update is None] + \
-                         sorted([pm for pm in all_page_marks if pm.latest_update is not None],
-                                reverse=True, key=lambda pm: pm.latest_update)
+                          sorted([pm for pm in all_page_marks if pm.latest_update is not None],
+                                 reverse=True, key=lambda pm: pm.latest_update)
     updated_serie = 0
     for page_mark in ordered_page_marks:
 
