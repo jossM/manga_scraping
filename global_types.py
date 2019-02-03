@@ -32,9 +32,7 @@ class UnknownChapterFormat(UserWarning):
 class Chapter(Serializable):
     """ represents all the logic to work with a chapter """
     def __init__(self, chapter: str, volume: Union[None, int] = None):
-        if isinstance(volume, str) and not volume.strip():
-            self.volume = None
-        self.volume = volume
+        self.volume = volume if isinstance(volume, int) else None
         self.chapter = chapter.strip()
 
     def __ge__(self, other: 'Chapter'):
