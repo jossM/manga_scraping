@@ -3,11 +3,11 @@ Scraping baka-updates on lambda to receive custom news letter on the series in d
 Adds links pointing to likely link of the release using qwant.
 Main is located in lambda_function.
 
-##Installation:
+## Installation:
  - create a 3.6 python virtualenv
  - install `pip install -r requirements.txt`
  
-##Deployement
+## Deployement
 On ubuntu vm for deployment.
 - `ssh -i <certificate> ubuntu@<dns-instance-address> `
 - `sudo apt-get update`
@@ -21,10 +21,8 @@ On ubuntu vm for deployment.
 - `zip -r ~/manga_scraping.zip *`
 - `aws s3 cp ~/manga_scraping.zip s3://manga-scraping/code.zip`
 
-##Architecture
-- Created several subnet with Internet Gateway in different AZ in us east 1.
-- Using lambda to execute with code from zip on s3. (see zip creation above)
-- Created a Dynamodb table and added an endpoint in the VPC for lambda to 
-access it.  
-- Created lambda using the file on s3 and set appropriate variable environment. 
-(see full list in config.)
+## Architecture
+- Created a Dynamodb table for db.
+- Using a lambda function to execute with code from zip on s3. (see zip creation above).
+
+- /!\ Could not set the lambda in a VPC with an internet gateway as the gateway was unavailable to the lambda worker.
