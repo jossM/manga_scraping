@@ -6,7 +6,7 @@ import pytz
 import emailing
 from logs import logger
 import page_marks_db
-import skraper
+from skraper import skraper_orc
 import release_formating
 
 
@@ -24,7 +24,7 @@ def handle_scheduled_scraping(event, context):
 
         logger.debug(f'scraping {page_mark.serie_id}, {page_mark.serie_name}')
         try:
-            scrapped_releases = skraper.scrap_bakaupdate_releases(page_mark.serie_id)
+            scrapped_releases = skraper_orc.scrap_bakaupdate_releases(page_mark.serie_id)
             formatted_scrapped_releases = release_formating.format_new_releases(scrapped_releases, page_mark)
             if formatted_scrapped_releases.releases:
                 updated_serie_releases.append(formatted_scrapped_releases)
@@ -58,3 +58,7 @@ def handle_scheduled_scraping(event, context):
         logger.info(f'adding {len(releases.releases)} to {releases.serie_id}, {releases.serie_title}')
         page_marks_map[releases.serie_id].extend(releases.releases)
     page_marks_db.batch_put(all_page_marks)
+
+
+if __name__ == '__main__':
+    handle_scheduled_scraping(None, None)
