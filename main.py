@@ -58,3 +58,7 @@ def handle_scheduled_scraping(event, context):
         logger.info(f'adding {len(releases.releases)} to {releases.serie_id}, {releases.serie_title}')
         page_marks_map[releases.serie_id].extend(releases.releases)
     page_marks_db.batch_put(all_page_marks)
+
+
+if __name__ == '__main__':
+    handle_scheduled_scraping(None, None)
