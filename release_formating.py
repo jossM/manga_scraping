@@ -2,7 +2,7 @@ from typing import Union, Iterable
 from urllib.parse import urlunparse, urlencode
 
 from page_marks_db import PageMark
-from skraper import ScrappedChapterRelease, ScrappedReleases
+from skraper.types import ScrappedChapterRelease, ScrappedReleases
 
 
 class FormattingWarning(Warning):

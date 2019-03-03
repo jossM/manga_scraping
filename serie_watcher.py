@@ -1,7 +1,7 @@
 import click
 
 import page_marks_db
-import skraper
+from skraper import skraper_orc
 
 
 @click.command()
@@ -21,7 +21,7 @@ def add_serie_in_db(serie_id, name=None, img=None, keep_chapters=True):
             if img is not None:
                 new_page_mark.img_link = img
     if new_page_mark is None:
-        new_page_mark = skraper.scrap_bakaupdate_serie(serie_id, name, img)
+        new_page_mark = skraper_orc.scrap_bakaupdate_serie(serie_id, name, img)
     click.echo(f"stored {new_page_mark}")
     page_marks_db.put(new_page_mark)
 
