@@ -39,3 +39,20 @@ On ubuntu vm for deployment.
 ## Data Model
 The code uses a single data table on dynamodb that contains a sorted list of all chapters for a serie within an object.
 For precise definition of all fields, see `page_mark_db file.
+
+## Code organisation logic
+### structure
+Each function corresponds to one of the following types:
+- logic (lgq): applies logic on input but does not call function or external services
+- service (srv): calls external services and may apply basic logic related to that service but cannot do anything else
+- orchestration (orc): main equivalent. calls functions (from the previous 2 types or lower level orchestration function) 
+to perform some kind of functionality.
+
+Each file should only contain one kind of function type.
+### functionality
+The different functionalities used in the project are:
+- email sending -> `emailing`
+- data retrieval via scrapping -> `skraper`
+- data clean up to avoid sending irrelevant information -> `release_formating` 
+- data (base) storage -> `page_mark_db`
+- system administration tools -> `serie_watcher` (temporary name)
