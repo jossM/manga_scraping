@@ -25,11 +25,12 @@ class PageMark(Serializable):
     """ ORM for table manga_page_marks on dynamodb"""
 
     def __init__(self,
-                 serie_id: str,
-                 serie_name: Union[str, None]=None,
-                 img_link: Union[str, None]=None,
+                 serie_id: str,  # bakaupdate serie id
+                 serie_name: Union[str, None]=None,  # name of the serie to be displayed
+                 img_link: Union[str, None]=None,  # link to the img displayed alongside new serie release
+                 # when the series was updated for the last time (to prioritise scrapping)
                  latest_update: Union[datetime, None]=None,
-                 chapter_marks: Union[List[Chapter], Tuple[Chapter]]= tuple()):
+                 chapter_marks: Union[List[Chapter], Tuple[Chapter]]= tuple()):  # all chapters for the serie
         self._serie_id = serie_id
         self.serie_name = serie_name
         self.img_link = img_link
