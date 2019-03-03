@@ -10,6 +10,12 @@ from utils import flatmap
 BASE_COL_CLASS_STR = "col-"
 COLS_CLASSES = {BASE_COL_CLASS_STR + str(i) for i in range(1, 12 + 1)}
 
+VOL_COLUMN_INDEX = 2
+CHAPTER_COLUMN_INDEX = 3
+GROUPS_COLUMN_INDEX = 4
+EXPECTED_ELEM_BY_LINE = 5
+SPLITTING_CHAPTER_CHARS = ('+', '-')
+
 
 def extract_rows_from_bootstrap(context_message: str, table_soup: BeautifulSoup)-> List[List[BeautifulSoup]]:
     """
@@ -61,13 +67,6 @@ def extract_rows_from_bootstrap(context_message: str, table_soup: BeautifulSoup)
             row = []
             row_cols_width_accumulator = 0
     return all_rows
-
-
-VOL_COLUMN_INDEX = 2
-CHAPTER_COLUMN_INDEX = 3
-GROUPS_COLUMN_INDEX = 4
-EXPECTED_ELEM_BY_LINE = 5
-SPLITTING_CHAPTER_CHARS = ('+', '-')
 
 
 def scrap_rows_soups(context_message: str, rows_soups: Iterable[List[BeautifulSoup]]) -> List[ScrappedChapterRelease]:
