@@ -21,3 +21,7 @@ provider "aws" {
   version = "~> 2.0"
   alias = "us-east-aws"
 }
+
+provider "tls" {
+  version = "~> 2.2"
+}

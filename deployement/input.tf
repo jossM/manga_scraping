@@ -15,6 +15,10 @@ variable "bucket" {
   description = "backend bucket for remote state"
 }
 
+variable "image-bucket" {
+  type = string
+}
+
 data "terraform_remote_state" "aws-common" {
   backend = "s3"
   config = {
