@@ -36,7 +36,7 @@ def handle_scheduled_scraping(event, context):
         else:
             logger.info(f'finished scrapping {page_mark.serie_id}, {page_mark.serie_name} ')
             updated_serie += 1
-    logger.info(f'End of scrapping for all series.')ji inst
+    logger.info(f'End of scrapping for all series.')
 
     # send email
     html_mail = emailing.helper.build_html_body(updated_serie_releases, updated_serie, len(all_page_marks))
