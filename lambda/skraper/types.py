@@ -1,4 +1,4 @@
-from typing import Union, Iterable
+from typing import Union, Iterable, NamedTuple
 
 from global_types import Chapter
 
@@ -6,6 +6,15 @@ from global_types import Chapter
 class ScrappingWarning(UserWarning):
     """ Any issue during scraping will have this type """
     pass
+
+
+class ScrappedSerie(NamedTuple):
+    serie_id: str    # bakaupdate serie id
+    serie_name: str  # Name of the serie on the page
+    img_file: str    # Path to the file
+
+    def as_dict(self):
+        return self._asdict()
 
 
 class ScrappedChapterRelease(Chapter):

@@ -6,3 +6,5 @@ pytz==2018.7
 Jinja2==2.10
 pytz==2018.7
 python-dateutil==2.7.5
+backoff==1.10.0
+rsa==4.6
