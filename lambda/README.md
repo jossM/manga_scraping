@@ -30,7 +30,7 @@ On ubuntu vm for deployment.
 - `source venv/bin/activate`
 - `pip3 install -t . -r requirements.txt --upgrade`
 - `zip -r ~/manga_scraping.zip *`
-- `aws s3 cp ~/manga_scraping.zip s3://<bucket>/code.zip`
+- `aws s3 cp ~/manga_scraping.zip s3://north-virginia-code/manga-scrapping-code.zip`
 # todo: créer une image docker pour faire ça.
 
 ## Architecture
