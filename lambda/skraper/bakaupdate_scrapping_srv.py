@@ -59,7 +59,6 @@ def retrieve_img(referer: str, url: str, cookies: Dict[str, str]) -> str:
     img_response.raise_for_status()
     image_format = img_response.headers.get('content-type', '').split('/')[-1]
     local_img_path = f"/tmp/scrapped_img_{encode_in_base64(url.split(HOST)[-1].strip('/'))}.{image_format}"
-    import click; click.echo(local_img_path)
     with open(local_img_path, 'wb') as img_file:
         img_file.write(img_response.content)
     return local_img_path

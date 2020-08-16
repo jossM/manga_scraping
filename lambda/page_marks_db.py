@@ -157,5 +157,5 @@ def delete(page_mark_serie_id: str) -> None:
             Exists=True,
         )
     except ValidationError as e:
-        print(f"serie {page_mark_serie_id} does not exists in db.")
+        logger.error(f"serie {page_mark_serie_id} does not exists in db.")
         raise e
