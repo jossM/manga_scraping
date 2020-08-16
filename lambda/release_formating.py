@@ -3,6 +3,7 @@ from urllib.parse import urlunparse, urlencode
 
 from page_marks_db import PageMark
 from skraper.types import ScrappedChapterRelease, ScrappedReleases
+from img_hosting import build_serie_img_viewer_url
 
 
 class FormattingWarning(Warning):
@@ -83,5 +84,5 @@ def format_new_releases(scrapped_releases: ScrappedReleases,
     return FormattedScrappedReleases(
         serie_id=serie_page_mark.serie_id,
         serie_title=serie_page_mark.serie_name,
-        serie_img_link=serie_page_mark.img_link,
+        serie_img_link=build_serie_img_viewer_url(serie_page_mark.serie_id),
         chapters_releases=formatted_scrapped_new_chapter_release)

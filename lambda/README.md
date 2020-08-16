@@ -18,17 +18,20 @@ Main is located in lambda_function.
  
 ## Deployement:
 On ubuntu vm for deployment.
+- `scp -i <certificate> cloudfront-secret.key ubuntu@<dns-instance-address>:~/cloudfront-secret.key`
 - `ssh -i <certificate> ubuntu@<dns-instance-address> `
 - `sudo apt-get update`
 - `sudo apt-get install git python3.6 zip`
 - `sudo apt-get install python-setuptools python-dev build-essential python3-pip virtualenv awscli`
 - `git clone https://github.com/jossM/manga_scraping.git`
-- `cd manga_scraping`
+- `mv cloudfront-secret.key manga_scraping/lambda/`
+- `cd manga_scraping/lambda`
 - `virtualenv -p python3.6 venv`
 - `source venv/bin/activate`
 - `pip3 install -t . -r requirements.txt --upgrade`
 - `zip -r ~/manga_scraping.zip *`
-- `aws s3 cp ~/manga_scraping.zip s3://manga-scraping/code.zip`
+- `aws s3 cp ~/manga_scraping.zip s3://<bucket>/code.zip`
+# todo: créer une image docker pour faire ça.
 
 ## Architecture
 - Created a Dynamodb table for db.

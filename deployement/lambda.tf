@@ -128,8 +128,7 @@ resource "aws_lambda_function" "manga-scrapping" {
       EMAIL_PERSO = var.receiver-mail
       NEWSLETTER_SENDER	= var.sender-mail
       CLOUD_FRONT_DISTRIBUTION_DOMAIN = aws_cloudfront_distribution.s3_distribution.domain_name
-      CLOUD_FRONT_KEY_ID = aws_cloudfront_public_key.access_key.id
-      CLOUD_FRONT_KEY_SECRET = tls_private_key.cloud-front-key.private_key_pem // Aws Secret Manager isn't used as I am alone on the project and I don't want to pay.
+      CLOUD_FRONT_KEY_ID = var.cloudfront-key-pair-id
     }
   }
 

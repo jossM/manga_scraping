@@ -4,7 +4,9 @@ locals {
 
 resource "aws_s3_bucket" "image-bucket" {
   bucket = var.image-bucket
-  acl    = "private"
+  versioning {
+    enabled = false
+  }
 
   tags = {
     project = "MangaScrapping"
@@ -100,21 +102,5 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
 
   viewer_certificate {
     cloudfront_default_certificate = true
-  }
-}
-
-resource "aws_cloudfront_public_key" "access_key" {
-  encoded_key = tls_private_key.cloud-front-key.public_key_pem
-  name = "manga-scrapping-key"
-}
-
-resource "tls_private_key" "cloud-front-key" {
-  // This stores the key in the terraform state which mean => here on S3.
-  // This is fine since I am alone on the account. This should not be used in an organisation.
-  algorithm = "RSA"
-  rsa_bits = 2048
-
-  lifecycle {
-    prevent_destroy = true
   }
 }
