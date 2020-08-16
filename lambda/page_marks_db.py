@@ -5,7 +5,7 @@ from typing import List, Dict, Union, Iterable, Tuple
 
 import dateutil.parser
 import boto3
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, ValidationError
 
 from config import AWS_REGION
 from global_types import Chapter, Serializable
@@ -27,13 +27,11 @@ class PageMark(Serializable):
     def __init__(self,
                  serie_id: str,  # bakaupdate serie id
                  serie_name: Union[str, None]=None,  # name of the serie to be displayed
-                 img_link: Union[str, None]=None,  # link to the img displayed alongside new serie release
                  # when the series was updated for the last time (to prioritise scrapping)
                  latest_update: Union[datetime, None]=None,
                  chapter_marks: Union[List[Chapter], Tuple[Chapter]]= tuple()):  # all chapters for the serie
         self._serie_id = serie_id
         self.serie_name = serie_name
-        self.img_link = img_link
         self.latest_update = latest_update
         self.chapter_marks: List[Chapter] = sorted(chapter_marks, reverse=True)
 
@@ -56,8 +54,7 @@ class PageMark(Serializable):
         header_sep = '\n\t'
         return (f'{str(type(self))}<'
                 + header_sep.join([f'serie: {self.serie_id}',
-                                   f'name: {self.serie_name}',
-                                   f'image link: {self.img_link}']
+                                   f'name: {self.serie_name}',]
                                   + [f'\tchapter {chapter}' for chapter in self.chapter_marks]) +
                 '>')
 
@@ -75,8 +72,6 @@ class PageMark(Serializable):
             serialized_mark['latest_update'] = self.latest_update.astimezone(pytz.utc).isoformat()
         if self.chapter_marks:
             serialized_mark['chapter_marks'] = [chapter.serialize() for chapter in self.chapter_marks]
-        if self.img_link:
-            serialized_mark['img_link'] = self.img_link
         return serialized_mark
 
     @classmethod
@@ -92,10 +87,6 @@ class PageMark(Serializable):
             warning_message_elem.append('"serie_name" attribute is missing.')
         else:
             deserialized_page_mark.serie_name = dict_data['serie_name']
-        if 'img_link' not in dict_data:
-            warning_message_elem.append('"img_link" attribute is missing.')
-        else:
-            deserialized_page_mark.img_link = dict_data['img_link']
 
         if 'latest_update' in dict_data:
             try:
@@ -147,7 +138,7 @@ def get(serie_id: str) -> Union[None, PageMark]:
 
 
 def batch_put(page_marks: Iterable[PageMark]) -> None:
-    """ writes on dynamodb table"""
+    """ writes all page marks on dynamodb table"""
     with DYNAMO_TABLE.batch_writer() as batch:
         for page_mark in page_marks:
             batch.put_item(Item=page_mark.serialize())
@@ -156,3 +147,15 @@ def batch_put(page_marks: Iterable[PageMark]) -> None:
 def put(page_mark: PageMark) -> None:
     """ writes on dynamodb table"""
     DYNAMO_TABLE.put_item(Item=page_mark.serialize())
+
+
+def delete(page_mark_serie_id: str) -> None:
+    """ delete the record in dynamodb """
+    try:
+        DYNAMO_TABLE.delete_item(
+            Key=dict(serie_id=page_mark_serie_id),
+            Exists=True,
+        )
+    except ValidationError as e:
+        print(f"serie {page_mark_serie_id} does not exists in db.")
+        raise e

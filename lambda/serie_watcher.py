@@ -2,6 +2,7 @@ import click
 
 import page_marks_db
 from skraper import skraper_orc
+from img_hosting import expose_image
 
 
 @click.command()
@@ -19,7 +20,10 @@ def add_serie_in_db(serie_id, name=None, keep_chapters=True):
                 new_page_mark.serie_name = name
     if new_page_mark is None:
         scrapped_page_mark = skraper_orc.scrap_bakaupdate_serie(serie_id, name)
-        new_page_mark = page_marks_db.PageMark(serie_id=serie_id, serie_name=scrapped_page_mark.serie_name)
+        expose_image(serie_id=serie_id, image_file_path=scrapped_page_mark.img_file)
+        new_page_mark = page_marks_db.PageMark(
+            serie_id=serie_id,
+            serie_name=scrapped_page_mark.serie_name)
     click.echo(f"stored {new_page_mark}")
     page_marks_db.put(new_page_mark)
 

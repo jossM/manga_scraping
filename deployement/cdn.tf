@@ -14,6 +14,14 @@ resource "aws_s3_bucket" "image-bucket" {
   }
 }
 
+resource "aws_s3_bucket_public_access_block" "block_image_bucket" {
+  bucket = aws_s3_bucket.image-bucket.id
+
+  block_public_acls = true
+  block_public_policy = true
+}
+
+
 resource "aws_cloudfront_origin_access_identity" "cdn" {
   comment = "manga scrapping cdn s3 identity"
 }

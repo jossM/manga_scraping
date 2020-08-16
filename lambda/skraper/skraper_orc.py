@@ -1,5 +1,3 @@
-from typing import Tuple, Dict
-
 from skraper.bakaupdate_scrapping_srv import transform_page_to_beautiful_soup, retrieve_img, build_serie_url
 from skraper.soup_extracter_lgq import extract_rows_from_bootstrap, scrap_rows_soups
 from skraper.types import ScrappedReleases,ScrappedSerie
@@ -19,7 +17,7 @@ def scrap_bakaupdate_releases(serie_id: str) -> ScrappedReleases:
 
 def scrap_bakaupdate_serie(serie_id: str, serie_name: str=None) -> ScrappedSerie:
     # always requests bakaupdate to check if the serie id is correct
-    serie_url = build_serie_url(serie_id)
+    serie_url = f'https://www.mangaupdates.com/series.html?id={serie_id}'
     bakaupdate_soup, cookies = transform_page_to_beautiful_soup(serie_url)
     if serie_name is None:
         serie_name = bakaupdate_soup.find('span', class_="releasestitle tabletitle").get_text()

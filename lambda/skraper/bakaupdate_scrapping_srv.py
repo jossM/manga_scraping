@@ -1,4 +1,3 @@
-import base64
 from typing import Tuple, Dict
 
 import backoff
@@ -6,6 +5,7 @@ from bs4 import BeautifulSoup
 import requests
 
 from logs import logger
+from utils import encode_in_base64
 
 HOST = 'www.mangaupdates.com'
 
@@ -58,7 +58,8 @@ def retrieve_img(referer: str, url: str, cookies: Dict[str, str]) -> str:
         cookies=cookies)
     img_response.raise_for_status()
     image_format = img_response.headers.get('content-type', '').split('/')[-1]
-    local_img_path = f"/tmp/scrapped_img_{base64.b64encode(url.split(HOST)[-1].strip('/'))}.{image_format}"
+    local_img_path = f"/tmp/scrapped_img_{encode_in_base64(url.split(HOST)[-1].strip('/'))}.{image_format}"
+    import click; click.echo(local_img_path)
     with open(local_img_path, 'wb') as img_file:
         img_file.write(img_response.content)
     return local_img_path
