@@ -3,7 +3,7 @@ beautifulsoup4==4.6.3
 boto3==1.9.37
 lxml==4.2.5
 pytz==2018.7
-Jinja2==2.10
+Jinja2==2.11.3
 pytz==2018.7
 python-dateutil==2.7.5
 backoff==1.10.0
