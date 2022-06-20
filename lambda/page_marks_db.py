@@ -154,7 +154,6 @@ def delete(page_mark_serie_id: str) -> None:
     try:
         DYNAMO_TABLE.delete_item(
             Key=dict(serie_id=page_mark_serie_id),
-            Exists=True,
         )
     except ValidationError as e:
         logger.error(f"serie {page_mark_serie_id} does not exists in db.")

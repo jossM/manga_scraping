@@ -1,7 +1,6 @@
 import click
 
 import page_marks_db
-from skraper import skraper_orc
 from img_hosting import expose_image
 
 
