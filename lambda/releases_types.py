@@ -3,12 +3,8 @@ from typing import Union, Iterable, NamedTuple
 from global_types import Chapter
 
 
-class ScrappingWarning(UserWarning):
-    """ Any issue during scraping will have this type """
-    pass
-
-
-class ScrappedSerie(NamedTuple):
+class Serie(NamedTuple):
+    """ALl data stored concerning a given manga serie"""
     serie_id: str    # bakaupdate serie id
     serie_name: str  # Name of the serie on the page
     img_file: str    # Path to the file
@@ -17,18 +13,18 @@ class ScrappedSerie(NamedTuple):
         return self._asdict()
 
 
-class ScrappedChapterRelease(Chapter):
+class ChapterRelease(Chapter):
     """ data on a given chapter """
     def __init__(self, group: str, chapter: str, volume: Union[int, None]= None):
-        super(ScrappedChapterRelease, self).__init__(chapter, volume)
+        super(ChapterRelease, self).__init__(chapter, volume)
         self.group = group
 
 
-class ScrappedReleases:
+class SerieReleases:
     """ data returned from scrapping """
     def __init__(self,
                  serie_id: str,
-                 chapters_releases: Iterable[ScrappedChapterRelease]):
+                 chapters_releases: Iterable[ChapterRelease]):
         self.serie_id = serie_id
         self.releases = sorted(chapters_releases, reverse=True)
 

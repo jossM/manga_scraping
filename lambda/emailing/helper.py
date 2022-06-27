@@ -9,7 +9,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from config import SENDING_EMAIL, RECEIVING_EMAILS, AWS_REGION, SES_CONFIGURATION_SET
 from logs import logger
-from release_formating import FormattedScrappedReleases
+from release_formating import FormattedSerieReleases
 
 ses_client = boto3.client('ses', region_name=AWS_REGION)
 
@@ -23,8 +23,7 @@ def _make_todays_date() -> str:
     return datetime.now().strftime("%a %d-%b")
 
 
-def build_html_body(formatted_scrapped_releases: List[FormattedScrappedReleases],
-                    scrapped_serie_number: int,
+def build_html_body(formatted_scrapped_releases: List[FormattedSerieReleases],
                     serie_number: int) -> str:
     """ creates an email body to be sent """
     j2_env = Environment(loader=FileSystemLoader(THIS_DIR),
@@ -35,12 +34,11 @@ def build_html_body(formatted_scrapped_releases: List[FormattedScrappedReleases]
     return j2_env.get_template('mail_template.html').render(
         date_str=_make_todays_date(),
         serie_number=serie_number,
-        scrapped_serie_number=scrapped_serie_number,
         all_series_releases=formatted_scrapped_releases,
         log_link=log_link)
 
 
-def build_txt_body(formatted_scrapped_releases: List[FormattedScrappedReleases]) -> str:
+def build_txt_body(formatted_scrapped_releases: List[FormattedSerieReleases]) -> str:
     """ builds a string as default display in case the html body was bad """
     string_body = "Hello,\n"
     if not formatted_scrapped_releases:
