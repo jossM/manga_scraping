@@ -1,5 +1,6 @@
-import os
 from datetime import datetime, timedelta
+import os
+from typing import TYPE_CHECKING
 
 import boto3
 from botocore.signers import CloudFrontSigner
@@ -21,7 +22,7 @@ def rsa_signer(message):
 
 cloudfront_signer = CloudFrontSigner(os.getenv("CLOUD_FRONT_KEY_ID", ""), rsa_signer)
 BUCKET = "manga-scraping-img"
-S3_REGION = "eu-west-1"  # Must corresponds to terraform provider region!
+S3_REGION = "eu-west-1"  # Must correspond to terraform provider region!
 
 
 def build_serie_img_viewer_url(serie_id: str) -> str:
@@ -40,18 +41,21 @@ def build_url_path(serie_id: str):
     return f"i{encode_in_base64(serie_id)}.{IMG_FORMAT}"
 
 
-def expose_image(serie_id: str, image_file_path: str) -> None:
-    """ host the image on the bucket exposed via the cdn """
-    from PIL import Image  # this is not imported at the top level as this library is used only for cli
-    local_img = Image.open(image_file_path)
-    formatted_img_path = os.path.join(os.path.dirname(os.path.abspath(image_file_path)),
-                                      f"formatted_img_{serie_id}.webp")
-    local_img.convert("RGB").save(formatted_img_path, "webp", quality=50)
+if TYPE_CHECKING:
+    from PIL import Image
 
-    s3_client = boto3.client("s3")
-    s3_client.upload_file(Filename=image_file_path,
-                          Bucket=BUCKET,
-                          Key=build_url_path(serie_id))
+
+def expose_image(serie_id: str, image: "Image") -> None:
+    """ host the image on the bucket exposed via the cdn """
+    image_file_path = f"/tmp/manga_scrapping_{serie_id}.webp"
+    image.convert("RGB").save(image_file_path, "webp", quality=50)
+    try:
+        s3_client = boto3.client("s3")
+        s3_client.upload_file(Filename=image_file_path,
+                              Bucket=BUCKET,
+                              Key=build_url_path(serie_id))
+    finally:
+        os.remove(image_file_path)
 
 
 def delete_image(serie_id: str) -> None:

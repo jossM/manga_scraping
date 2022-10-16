@@ -7,7 +7,7 @@ import backoff
 import requests
 
 from logs import logger
-from releases_types import SerieReleases, ChapterRelease
+from releases_types import SerieReleases, ChapterRelease, Serie
 
 
 @backoff.on_exception(backoff.expo, requests.HTTPError, max_tries=3)
@@ -57,3 +57,64 @@ def get_releases(until: date) -> List[SerieReleases]:
         page += 1
     return [SerieReleases(serie_id=str(series_id), chapters_releases=list(chapters))
             for series_id, chapters in chapters_per_series.items()]
+
+
+@backoff.on_exception(backoff.expo, requests.HTTPError, max_tries=3)
+def _request_serie(serie_id: int) -> dict:
+    requested_url = f"https://api.mangaupdates.com/v1/series/{serie_id}"
+    response = requests.get(requested_url)
+    if response.status_code != 404:
+        response.raise_for_status()
+    else:
+        raise ValueError(f"Serie id {serie_id} not found")
+    return response.json()
+
+
+def get_serie_info(serie_id: int) -> Serie:
+    """return serie object along with serie """
+    result = _request_serie(serie_id)
+    try:
+        return Serie(
+            serie_id=str(result["series_id"]),
+            serie_name=result["title"],
+            img_url=result["image"]["url"]["original"]
+        )
+    except KeyError as e:
+        raise KeyError(f"Failed to get key {str(e)} from record {result}.")
+
+
+@backoff.on_exception(backoff.expo, requests.HTTPError, max_tries=3)
+def search_series(keywords: str) -> List[Serie]:
+    """Perform a search to try to find a given serie"""
+    response = requests.post(
+        "https://api.mangaupdates.com/v1/series/search",
+        json=dict(
+            search=keywords,
+            perpage=20,
+        ))
+    response.raise_for_status()
+    matching_series = []
+    try:
+        results = response.json()["results"]
+    except KeyError as e:
+        raise ValueError(f"Failed to get key {str(e)} from record {response.json()}.")
+    for record in results:
+        try:
+            record = record['record']
+            matching_series.append(
+                Serie(
+                    serie_id=str(record["series_id"]),
+                    serie_name=record["title"],
+                    img_url=record["image"]["url"]["original"]
+                )
+            )
+        except KeyError as e:
+            raise ValueError(f"Failed to get key {str(e)} from record {record}.")
+    return matching_series
+
+
+@backoff.on_exception(backoff.expo, requests.HTTPError, max_tries=3)
+def get_image(url: str) -> bytes:
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.content

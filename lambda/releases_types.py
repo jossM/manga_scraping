@@ -7,7 +7,7 @@ class Serie(NamedTuple):
     """ALl data stored concerning a given manga serie"""
     serie_id: str    # bakaupdate serie id
     serie_name: str  # Name of the serie on the page
-    img_file: str    # Path to the file
+    img_url: str     # url of the image
 
     def as_dict(self):
         return self._asdict()
